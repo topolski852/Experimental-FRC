@@ -53,7 +53,8 @@ public class Constants {
                 .withReverseLimit(true, true, 0.0)
                 .reverseLimitType(ReverseLimitTypeValue.NormallyOpen)
                 .withVoltageLimits(8, -8)
-                .withStatorCurrentLimit(Amps.of(100.0))
+                .withStatorCurrentLimit(Amps.of(60.0))
+                .withSupplyCurrentLimit(Amps.of(10.0))
 
                 .withStallCurrentThreshold(100.0) // amps
                 .withStallVelocityThreshold(kStall.VELOCITY_THRESHOLD / 360.0) // deg/sec → rps
@@ -70,7 +71,8 @@ public class Constants {
                 .withReverseLimit(true, true, 0.0)
                 .reverseLimitType(ReverseLimitTypeValue.NormallyOpen)
                 .withVoltageLimits(8, -8)
-                .withStatorCurrentLimit(Amps.of(100.0))
+                .withStatorCurrentLimit(Amps.of(60.0))
+                .withSupplyCurrentLimit(Amps.of(10.0))
 
                 .withStallCurrentThreshold(100.0)
                 .withStallVelocityThreshold(kStall.VELOCITY_THRESHOLD / 360.0)

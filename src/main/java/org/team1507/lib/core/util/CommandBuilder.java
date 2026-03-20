@@ -16,25 +16,34 @@ import java.util.ConcurrentModificationException;
 import java.util.function.BiConsumer;
 import java.util.function.BooleanSupplier;
 
+import org.team1507.lib.core.logging.Telemetry;
+
 /**
- * A lightweight, allocation-free command builder designed for IO-based subsystems.
+ * A lightweight, allocation‑free command builder for IO‑focused subsystems.
  *
- * <p>This class avoids WPILib decorators and FunctionalCommand wrappers, ensuring:
+ * <p>CommandBuilder provides a simple, declarative way to construct commands
+ * with predictable runtime behavior. All callbacks are stored up front and
+ * executed without creating new objects during scheduler cycles.
+ *
+ * <p>Each command supports:
  * <ul>
- *   <li>No per-loop allocations</li>
- *   <li>Deterministic scheduler behavior</li>
- *   <li>Clear separation of driver intent and mechanical fault handling</li>
- *   <li>Simple, readable, declarative command construction</li>
+ *   <li>Initialization and execution callbacks</li>
+ *   <li>Normal finish conditions</li>
+ *   <li>Timeout‑based termination</li>
+ *   <li>Stall‑based termination</li>
+ *   <li>End handlers with full termination‑cause information</li>
  * </ul>
  *
- * <p>Supports three independent termination causes:
+ * <p>Command lifecycle telemetry is emitted automatically, including:
  * <ul>
- *   <li>Normal finish condition</li>
- *   <li>Timeout expiration</li>
- *   <li>Stall detection</li>
+ *   <li>Start and end timestamps</li>
+ *   <li>Active state</li>
+ *   <li>Duration</li>
+ *   <li>Interruption, timeout, and stall flags</li>
  * </ul>
  *
- * <p>The {@code onEnd} handler receives all three cause flags.
+ * <p>This builder is designed for subsystems that perform direct IO and benefit
+ * from deterministic, low‑overhead command execution.
  */
 public class CommandBuilder extends Command {
 
@@ -45,12 +54,12 @@ public class CommandBuilder extends Command {
     private Runnable onExecute = () -> {};
 
     /**
-     * End handler with full termination cause information.
+     * Handler invoked when the command ends, providing full termination context.
      */
     @FunctionalInterface
     public interface EndHandler {
         /**
-         * @param interrupted true if the scheduler interrupted the command
+         * @param interrupted true if the command was interrupted
          * @param timedOut    true if the command ended due to timeout
          * @param stalled     true if the command ended due to stall detection
          */
@@ -78,7 +87,7 @@ public class CommandBuilder extends Command {
     private boolean stalled = false;
 
     /**
-     * Creates a new CommandBuilder with subsystem requirements.
+     * Creates a new CommandBuilder and declares subsystem requirements.
      *
      * @param requirements subsystems required by this command
      */
@@ -87,7 +96,7 @@ public class CommandBuilder extends Command {
     }
 
     /**
-     * Assigns a name to the command for debugging.
+     * Assigns a name to the command for debugging and telemetry.
      *
      * @param name command name
      * @return this builder
@@ -98,7 +107,7 @@ public class CommandBuilder extends Command {
     }
 
     /**
-     * Sets the initialization routine, called once when the command is scheduled.
+     * Sets the initialization routine, executed once when the command starts.
      *
      * @param r initialization action
      * @return this builder
@@ -110,7 +119,7 @@ public class CommandBuilder extends Command {
     }
 
     /**
-     * Sets the execution routine, called every scheduler cycle.
+     * Sets the execution routine, executed every scheduler cycle.
      *
      * @param r execution action
      * @return this builder
@@ -122,7 +131,7 @@ public class CommandBuilder extends Command {
     }
 
     /**
-     * Sets the end handler with full termination cause information.
+     * Sets the end handler, receiving full termination‑cause information.
      *
      * @param r end handler
      * @return this builder
@@ -134,16 +143,17 @@ public class CommandBuilder extends Command {
     }
 
     /**
-     * Convenience overload for end handlers that do not care about
-     * interruption, timeout, or stall causes.
+     * Convenience overload for end handlers that do not use termination causes.
+     *
+     * @param r action to run when the command ends
+     * @return this builder
      */
     public CommandBuilder onEnd(Runnable r) {
         return onEnd((i, t, s) -> r.run());
     }
 
     /**
-     * Backwards-compatible overload for handlers that only care about
-     * interrupted and timeout causes.
+     * Convenience overload for handlers that use interruption and timeout causes.
      *
      * @param r handler receiving (interrupted, timedOut)
      * @return this builder
@@ -153,9 +163,9 @@ public class CommandBuilder extends Command {
     }
 
     /**
-     * Sets the normal finish condition.
+     * Sets the normal finish condition for the command.
      *
-     * @param condition boolean supplier that returns true when the command should end
+     * @param condition supplier returning true when the command should end
      * @return this builder
      */
     public CommandBuilder isFinished(BooleanSupplier condition) {
@@ -188,8 +198,7 @@ public class CommandBuilder extends Command {
     }
 
     /**
-     * Forces the command to run until the timeout expires, ignoring any normal
-     * finish condition.
+     * Runs the command until the timeout expires, ignoring normal finish conditions.
      *
      * @param seconds timeout duration
      * @return this builder
@@ -205,7 +214,7 @@ public class CommandBuilder extends Command {
      * Sets a stall finish condition. When the supplier returns true, the command
      * ends and {@code stalled} is set to true.
      *
-     * @param stallCondition boolean supplier indicating stall state
+     * @param stallCondition supplier indicating stall state
      * @return this builder
      */
     public CommandBuilder stallFinish(BooleanSupplier stallCondition) {
@@ -223,6 +232,12 @@ public class CommandBuilder extends Command {
         timedOut = false;
         stalled = false;
         startTime = Timer.getFPGATimestamp();
+
+        // Telemetry: command start
+        String base = "Command/" + getName();
+        Telemetry.set(base + "/Active", true);
+        Telemetry.set(base + "/StartTime", startTime);
+
         onInit.run();
     }
 
@@ -233,6 +248,19 @@ public class CommandBuilder extends Command {
 
     @Override
     public void end(boolean interrupted) {
+        double endTime = Timer.getFPGATimestamp();
+        String base = "Command/" + getName();
+
+        // Telemetry: command end
+        Telemetry.set(base + "/Active", false);
+        Telemetry.set(base + "/EndTime", endTime);
+        Telemetry.set(base + "/Duration", endTime - startTime);
+
+        // Telemetry: termination causes
+        Telemetry.set(base + "/Interrupted", interrupted);
+        Telemetry.set(base + "/TimedOut", timedOut);
+        Telemetry.set(base + "/Stalled", stalled);
+
         onEnd.accept(interrupted, timedOut, stalled);
     }
 

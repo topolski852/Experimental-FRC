@@ -54,6 +54,9 @@ public final class Motor1507 {
     /** Timestamp of the last moment the motor was not stalled. */
     private double lastNotStalledTime = 0;
 
+    /**  */
+    private boolean lastStalled = false;
+
     // ------------------------------------------------------------
     // Telemetry fields
     // ------------------------------------------------------------
@@ -156,6 +159,10 @@ public final class Motor1507 {
         setControl(new PositionDutyCycle(rotations));
     }
 
+    public void setPositionVoltage(double rotations) {
+        setControl(new PositionVoltage(rotations));
+    }
+
     public void setPositionVoltage(double rotations, double ffVolts) {
         setControl(
             new PositionVoltage(rotations)
@@ -233,11 +240,22 @@ public final class Motor1507 {
         double now = Timer.getFPGATimestamp();
 
         if (!stalledNow) {
+            if (lastStalled) {
+                Telemetry.event(name + "/StallEnd");
+            }
+            lastStalled = false;
             lastNotStalledTime = now;
             return false;
         }
 
-        return (now - lastNotStalledTime) > stallTimeSeconds;
+        boolean sustained = (now - lastNotStalledTime) > stallTimeSeconds;
+
+        if (sustained && !lastStalled) {
+            Telemetry.event(name + "/StallStart");
+        }
+
+        lastStalled = sustained;
+        return sustained;
     }
 
     // ============================================================

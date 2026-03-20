@@ -8,6 +8,7 @@
 
 package org.team1507.lib.core.logging;
 
+import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.Timer;
 
 import java.util.ArrayList;
@@ -18,11 +19,18 @@ import java.util.Map;
 /**
  * Centralized telemetry publisher.
  *
- * <p>{@code Telemetry} is responsible for periodically publishing registered
- * {@link InputField}s according to their declared {@link TelemetryRate}.
+ * <p>{@code Telemetry} manages two forms of logging:
  *
- * <p>This class owns all scheduling and timing logic. Value production and
- * NetworkTables interaction are handled by {@link InputField}.
+ * <ul>
+ *   <li><b>Periodic field logging</b> via {@link InputField}, published at
+ *       configurable {@link TelemetryRate}s.</li>
+ *   <li><b>Immediate event logging</b> for command lifecycle, stall events,
+ *       timestamps, and other one‑shot values.</li>
+ * </ul>
+ *
+ * <p>Periodic logging is rate‑limited and intended for sensor and mechanism
+ * state. Event logging writes directly to NetworkTables and is intended for
+ * command activity, timestamps, and discrete state changes.
  */
 public final class Telemetry {
 
@@ -49,8 +57,12 @@ public final class Telemetry {
 
     private Telemetry() {}
 
+    // -------------------------------------------------------------------------
+    // Registration
+    // -------------------------------------------------------------------------
+
     /**
-     * Registers an {@link InputField} for telemetry publishing.
+     * Registers an {@link InputField} for periodic telemetry publishing.
      *
      * @param field the telemetry field to register
      */
@@ -61,11 +73,7 @@ public final class Telemetry {
     }
 
     /**
-     * Registers multiple {@link InputField}s for telemetry publishing.
-     *
-     * <p>This is a convenience overload that allows a group of telemetry fields
-     * to be registered in a single call. Each field is registered according to
-     * its declared {@link TelemetryRate}.
+     * Registers multiple {@link InputField}s for periodic telemetry publishing.
      *
      * @param fields the telemetry fields to register
      */
@@ -74,6 +82,57 @@ public final class Telemetry {
             register(field);
         }
     }
+
+    // -------------------------------------------------------------------------
+    // Event Logging (Immediate)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Writes a boolean telemetry value immediately.
+     *
+     * <p>This is intended for command lifecycle flags, stall events, and other
+     * discrete state changes that should appear in logs as they occur.
+     *
+     * @param key   NetworkTables key
+     * @param value boolean value to publish
+     */
+    public static void set(String key, boolean value) {
+        NetworkTableInstance.getDefault()
+            .getEntry(key)
+            .setBoolean(value);
+    }
+
+    /**
+     * Writes a numeric telemetry value immediately.
+     *
+     * <p>This is intended for timestamps, durations, and other one‑shot numeric
+     * values that should be logged at the moment they occur.
+     *
+     * @param key   NetworkTables key
+     * @param value numeric value to publish
+     */
+    public static void set(String key, double value) {
+        NetworkTableInstance.getDefault()
+            .getEntry(key)
+            .setDouble(value);
+    }
+
+    /**
+     * Logs a timestamped event.
+     *
+     * <p>This convenience method records the current FPGA timestamp under the
+     * given key. It is useful for marking command start/end events, stall
+     * transitions, and other discrete occurrences.
+     *
+     * @param key NetworkTables key
+     */
+    public static void event(String key) {
+        set(key, Timer.getFPGATimestamp());
+    }
+
+    // -------------------------------------------------------------------------
+    // Periodic Publishing
+    // -------------------------------------------------------------------------
 
     /**
      * Publishes registered telemetry fields whose logging period has elapsed.
