@@ -10,6 +10,7 @@ package org.team1507.lib.core.util;
 
 import static edu.wpi.first.units.Units.Amps;
 
+import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import com.ctre.phoenix6.signals.ForwardLimitTypeValue;
 import com.ctre.phoenix6.signals.ReverseLimitTypeValue;
 
@@ -43,11 +44,21 @@ public record MotorConfig(
         double reverseLimitAutosetValue,
         ReverseLimitTypeValue reverseLimitType,
 
+        Feedback feedback,
+
         boolean brakeMode
 ) {
 
     public static enum ControlMode { DUTY_CYCLE, VELOCITY, POSITION, MOTION_MAGIC }
     public static enum GravityType { NONE, COSINE, SINE, CONSTANT }
+
+    public record Feedback(
+        FeedbackSensorSourceValue source,
+        int remoteSensorId,
+        double rotorToSensorRatio,
+        double sensorToMechanismRatio,
+        double rotorOffset
+    ) {}
 
     public static Builder builder() {
         return new Builder();
@@ -85,6 +96,12 @@ public record MotorConfig(
         private boolean reverseLimitAutosetEnable = false;
         private double reverseLimitAutosetValue = 0.0;
         private ReverseLimitTypeValue reverseLimitType = ReverseLimitTypeValue.NormallyOpen;
+
+        private FeedbackSensorSourceValue feedbackSource = FeedbackSensorSourceValue.RotorSensor;
+        private int feedbackRemoteId = 0;
+        private double rotorToSensorRatio = 1.0;
+        private double sensorToMechanismRatio = 1.0;
+        private double rotorOffset = 0.0;
 
         private boolean brakeMode = false; // DEFAULT = COAST
 
@@ -148,6 +165,31 @@ public record MotorConfig(
             this.reverseLimitType = type;
             return this;
         }
+
+        public Builder withFeedbackSensor(FeedbackSensorSourceValue source) {
+            this.feedbackSource = source;
+            return this;
+        }
+
+        public Builder withRemoteSensorId(int id) {
+            this.feedbackRemoteId = id;
+            return this;
+        }
+
+        public Builder withRotorToSensorRatio(double ratio) {
+            this.rotorToSensorRatio = ratio;
+            return this;
+        }
+
+        public Builder withSensorToMechanismRatio(double ratio) {
+            this.sensorToMechanismRatio = ratio;
+            return this;
+        }
+
+        public Builder withRotorOffset(double offsetRotations) {
+            this.rotorOffset = offsetRotations;
+            return this;
+        }
         
         /** Sets the motor to brake mode. */
         public Builder withBrake() {
@@ -186,6 +228,14 @@ public record MotorConfig(
                 reverseLimitAutosetEnable,
                 reverseLimitAutosetValue,
                 reverseLimitType,
+
+                new Feedback(
+                    feedbackSource,
+                    feedbackRemoteId,
+                    rotorToSensorRatio,
+                    sensorToMechanismRatio,
+                    rotorOffset
+                ),
 
                 brakeMode
             );
