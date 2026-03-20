@@ -45,7 +45,7 @@ public class Constants {
         public static final double MANUAL_POSITIVE_POWER = 0.4;
         public static final double MANUAL_NEGATIVE_POWER = -0.4;
 
-        public static final MotorConfig CONFIG =
+        public static final MotorConfig CONFIG_A =
             MotorConfig.builder(ControlMode.POSITION)
                 .inverted(false)
                 .withPID(0.5, 0.0, 0.0)
@@ -55,6 +55,17 @@ public class Constants {
                 .withVoltageLimits(8, -8)
                 .withStatorCurrentLimit(Amps.of(100.0))
                 .withBrake()
+                .build();
+
+        public static final MotorConfig CONFIG_B =
+            MotorConfig.builder(ControlMode.POSITION)
+                .inverted(true)
+                .withPID(0.5, 0.0, 0.0)
+                .withGravity(0.1, GravityType.COSINE)
+                .withReverseLimit(true, true, 0.0) // enable, autoset, reset to 0.0 
+                .reverseLimitType(ReverseLimitTypeValue.NormallyOpen)
+                .withVoltageLimits(8, -8)
+                .withStatorCurrentLimit(Amps.of(100.0))
                 .build();
 
         public static final class kStall {

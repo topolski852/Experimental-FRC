@@ -16,29 +16,54 @@ import java.util.function.DoubleSupplier;
 import org.team1507.lib.core.framework.Subsystem1507;
 import org.team1507.lib.core.impl.ctre.Motor1507;
 import org.team1507.lib.core.util.CommandBuilder;
-import org.team1507.robot.Constants;
+
+import static org.team1507.robot.Constants.kArmMotor.*;
 
 /**
- * Subsystem controlling the robot's arm mechanism.
+ * Subsystem controlling a dual‑motor intake arm mechanism.
  *
- * <p>This subsystem owns the arm motor and provides high-level
- * position and manual control in mechanism units (degrees).
+ * <p>This subsystem owns two {@link Motor1507} instances that operate in
+ * synchronized position or manual control. Each motor uses its own
+ * {@link org.team1507.lib.core.util.MotorConfig}, allowing one to be inverted
+ * mechanically while both receive identical control commands.
+ *
+ * <p>The subsystem exposes high‑level arm actions such as deploying,
+ * retracting, and manual joystick control, while internally managing
+ * soft‑limit enforcement and unit conversions.
  */
 public final class ArmSystem extends Subsystem1507 {
 
-    private final Motor1507 motor;
+    /** Primary arm motor (non‑inverted). */
+    private final Motor1507 motorA;
 
-    /** Desired arm angle in degrees. */
-    private double targetAngleDeg = Constants.kArmMotor.RETRACTED_ANGLE_DEGREES;
+    /** Secondary arm motor (inverted). */
+    private final Motor1507 motorB;
 
+    /** Last commanded arm angle in degrees. */
+    private double targetAngleDeg = RETRACTED_ANGLE_DEGREES;
+
+    /**
+     * Creates a new dual‑motor arm subsystem.
+     *
+     * <p>Both motors are configured independently using {@code CONFIG_1} and
+     * {@code CONFIG_2}, allowing one motor to be inverted while maintaining
+     * identical control behavior.
+     */
     public ArmSystem() {
         super("Arm");
 
-        motor = new Motor1507(
-            "Arm",
+        motorA = new Motor1507(
+            "ArmA",
             Motor1507.Type.FX,
-            21, // CAN ID lives here
-            Constants.kArmMotor.CONFIG
+            21,
+            CONFIG_A
+        );
+
+        motorB = new Motor1507(
+            "ArmB",
+            Motor1507.Type.FX,
+            22,
+            CONFIG_B
         );
     }
 
@@ -49,24 +74,31 @@ public final class ArmSystem extends Subsystem1507 {
     /**
      * Commands the arm to a target angle in degrees.
      *
-     * <p>The requested angle is clamped to the configured
-     * mechanical limits.
+     * <p>The requested angle is clamped to the subsystem's mechanical limits
+     * before being converted to motor rotations and applied to both motors.
      *
      * @param angleDeg desired arm angle in degrees
      */
     public void setAngle(double angleDeg) {
         targetAngleDeg = clampAngle(angleDeg);
-        motor.setPositionVoltage(degToRotations(targetAngleDeg), 0.0);
+        double rotations = degToRotations(targetAngleDeg);
+
+        motorA.setPositionVoltage(rotations, 0.0);
+        motorB.setPositionVoltage(rotations, 0.0);
     }
 
-    /** Moves the arm to the deployed position. */
+    /**
+     * Moves the arm to its deployed (extended) position.
+     */
     public void deploy() {
-        setAngle(Constants.kArmMotor.DEPLOYED_ANGLE_DEGREES);
+        setAngle(DEPLOYED_ANGLE_DEGREES);
     }
 
-    /** Moves the arm to the retracted position. */
+    /**
+     * Moves the arm to its retracted (stowed) position.
+     */
     public void retract() {
-        setAngle(Constants.kArmMotor.RETRACTED_ANGLE_DEGREES);
+        setAngle(RETRACTED_ANGLE_DEGREES);
     }
 
     // ============================================================
@@ -74,38 +106,44 @@ public final class ArmSystem extends Subsystem1507 {
     // ============================================================
 
     /**
-     * Runs the arm motor manually using a fixed duty cycle.
+     * Runs the arm manually using a duty‑cycle input.
      *
-     * <p>Manual motion is automatically limited to prevent
-     * driving past mechanical bounds.
+     * <p>Motion is automatically restricted when the arm reaches its
+     * configured mechanical limits. When the input exceeds a threshold,
+     * fixed manual power values are applied to both motors.
      *
-     * @param duty requested motor duty cycle
+     * @param duty joystick or operator‑requested duty cycle
      */
     public void runManual(double duty) {
         double positionDeg = getCurrentAngle();
 
-        if (duty > 0 && positionDeg >= Constants.kArmMotor.MAX_ANGLE_DEGREES) {
-            motor.stop();
+        if (duty > 0 && positionDeg >= MAX_ANGLE_DEGREES) {
+            stop();
             return;
         }
 
-        if (duty < 0 && positionDeg <= Constants.kArmMotor.MIN_ANGLE_DEGREES) {
-            motor.stop();
+        if (duty < 0 && positionDeg <= MIN_ANGLE_DEGREES) {
+            stop();
             return;
         }
 
         if (duty > 0.5) {
-            motor.runDuty(Constants.kArmMotor.MANUAL_POSITIVE_POWER);
+            motorA.runDuty(MANUAL_POSITIVE_POWER);
+            motorB.runDuty(MANUAL_POSITIVE_POWER);
         } else if (duty < -0.5) {
-            motor.runDuty(Constants.kArmMotor.MANUAL_NEGATIVE_POWER);
+            motorA.runDuty(MANUAL_NEGATIVE_POWER);
+            motorB.runDuty(MANUAL_NEGATIVE_POWER);
         } else {
-            motor.stop();
+            stop();
         }
     }
 
-    /** Stops the arm motor immediately. */
+    /**
+     * Stops both arm motors immediately.
+     */
     public void stop() {
-        motor.stop();
+        motorA.stop();
+        motorB.stop();
     }
 
     // ============================================================
@@ -113,14 +151,19 @@ public final class ArmSystem extends Subsystem1507 {
     // ============================================================
 
     /**
-     * Returns the current arm angle in degrees.
+     * Returns the current arm angle in degrees, based on the primary motor's
+     * rotor position.
+     *
+     * @return current arm angle in degrees
      */
     public double getCurrentAngle() {
-        return rotationsToDeg(motor.getRotorPosition());
+        return rotationsToDeg(motorA.getRotorPosition());
     }
 
     /**
      * Returns the last commanded target angle in degrees.
+     *
+     * @return target arm angle in degrees
      */
     public double getTargetAngle() {
         return targetAngleDeg;
@@ -130,34 +173,53 @@ public final class ArmSystem extends Subsystem1507 {
     // UTIL
     // ============================================================
 
+    /**
+     * Clamps an angle to the subsystem's mechanical limits.
+     */
     private static double clampAngle(double angleDeg) {
         return MathUtil.clamp(
             angleDeg,
-            Constants.kArmMotor.MIN_ANGLE_DEGREES,
-            Constants.kArmMotor.MAX_ANGLE_DEGREES
+            MIN_ANGLE_DEGREES,
+            MAX_ANGLE_DEGREES
         );
     }
 
+    /**
+     * Converts degrees to motor rotations.
+     */
     private static double degToRotations(double degrees) {
         return degrees / 360.0;
     }
 
+    /**
+     * Converts motor rotations to degrees.
+     */
     private static double rotationsToDeg(double rotations) {
         return rotations * 360.0;
     }
 
     // ============================================================
-    // Commands
+    // COMMAND FACTORIES
     // ============================================================
 
+    /**
+     * Creates a command that deploys the arm and holds position until interrupted.
+     *
+     * @return deploy command
+     */
     public Command deployCommand() {
         return new CommandBuilder(this)
             .named("Arm.deploy")
             .onInitialize(this::deploy)
             .onEnd(this::stop)
-            .isFinished(false); // runs until interrupted
+            .isFinished(false);
     }
 
+    /**
+     * Creates a command that retracts the arm and holds position until interrupted.
+     *
+     * @return retract command
+     */
     public Command retractCommand() {
         return new CommandBuilder(this)
             .named("Arm.retract")
@@ -166,24 +228,40 @@ public final class ArmSystem extends Subsystem1507 {
             .isFinished(false);
     }
 
+    /**
+     * Creates a command that manually drives the arm upward.
+     *
+     * @return manual upward command
+     */
     public Command manualUpCommand() {
         return new CommandBuilder(this)
             .named("Arm.manualUp")
             .onExecute(() ->
-                motor.runDuty(Constants.kArmMotor.MANUAL_POSITIVE_POWER)
+                runManual(MANUAL_POSITIVE_POWER)
             )
             .onEnd(this::stop);
     }
 
+    /**
+     * Creates a command that manually drives the arm downward.
+     *
+     * @return manual downward command
+     */
     public Command manualDownCommand() {
         return new CommandBuilder(this)
             .named("Arm.manualDown")
             .onExecute(() ->
-                motor.runDuty(Constants.kArmMotor.MANUAL_NEGATIVE_POWER)
+                runManual(MANUAL_NEGATIVE_POWER)
             )
             .onEnd(this::stop);
     }
 
+    /**
+     * Creates a command that drives the arm manually using a joystick input.
+     *
+     * @param inputSupplier supplier providing a continuous duty‑cycle input
+     * @return joystick‑driven manual control command
+     */
     public Command manualJoystickCommand(DoubleSupplier inputSupplier) {
         return new CommandBuilder(this)
             .named("Arm.manualJoystick")
