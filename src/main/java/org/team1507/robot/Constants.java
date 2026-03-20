@@ -50,10 +50,15 @@ public class Constants {
                 .inverted(false)
                 .withPID(0.5, 0.0, 0.0)
                 .withGravity(0.1, GravityType.COSINE)
-                .withReverseLimit(true, true, 0.0) // enable, autoset, reset to 0.0 
+                .withReverseLimit(true, true, 0.0)
                 .reverseLimitType(ReverseLimitTypeValue.NormallyOpen)
                 .withVoltageLimits(8, -8)
                 .withStatorCurrentLimit(Amps.of(100.0))
+
+                .withStallCurrentThreshold(100.0) // amps
+                .withStallVelocityThreshold(kStall.VELOCITY_THRESHOLD / 360.0) // deg/sec → rps
+                .withStallTime(kStall.TIME_SEC)
+
                 .withBrake()
                 .build();
 
@@ -62,49 +67,55 @@ public class Constants {
                 .inverted(true)
                 .withPID(0.5, 0.0, 0.0)
                 .withGravity(0.1, GravityType.COSINE)
-                .withReverseLimit(true, true, 0.0) // enable, autoset, reset to 0.0 
+                .withReverseLimit(true, true, 0.0)
                 .reverseLimitType(ReverseLimitTypeValue.NormallyOpen)
                 .withVoltageLimits(8, -8)
                 .withStatorCurrentLimit(Amps.of(100.0))
-                .build();
 
-        public static final class kStall {
-            /**
-             * Stall detection tuning parameters for the Intake Arm.
-             *
-             * These values determine how the subsystem decides that the arm has
-             * mechanically stalled (i.e., the motors are applying effort but the
-             * mechanism is not moving). Adjusting these values changes how sensitive
-             * stall detection is.
-             *
-             * VELOCITY_THRESHOLD:
-             *   - Minimum mechanism velocity (in deg/sec) considered "moving".
-             *   - If the arm's measured velocity stays BELOW this value while effort
-             *     is being applied, it is considered "not moving".
-             *   - Increase this value → stall is detected MORE easily (more sensitive).
-             *   - Decrease this value → stall is detected LESS easily (less sensitive).
-             *
-             * EFFORT_THRESHOLD:
-             *   - Minimum applied motor voltage (in volts) considered "trying".
-             *   - If the motors are applying MORE than this voltage but velocity is low,
-             *     the subsystem considers the arm to be pushing against resistance.
-             *   - Increase this value → stall requires MORE effort to trigger (less sensitive).
-             *   - Decrease this value → stall triggers with LESS effort (more sensitive).
-             *
-             * TIME_SEC:
-             *   - Minimum duration (in seconds) that the stall condition must persist
-             *     before being considered a true stall.
-             *   - This prevents false positives from brief slowdowns, backlash, or noise.
-             *   - Increase this value → stall must last LONGER to trigger (less sensitive).
-             *   - Decrease this value → stall triggers FASTER (more sensitive).
-             *
-             * Together, these three values define the mechanical "signature" of a stall.
-             * Tune them based on real‑world behavior: heavier arms, higher friction, or
-             * slower gearboxes may require different thresholds.
-             */
-            public static final double VELOCITY_THRESHOLD = 1.0;   // deg/sec
-            public static final double EFFORT_THRESHOLD   = 2.0;   // volts
-            public static final double TIME_SEC           = 0.015;  // seconds
-        }
+                .withStallCurrentThreshold(100.0)
+                .withStallVelocityThreshold(kStall.VELOCITY_THRESHOLD / 360.0)
+                .withStallTime(kStall.TIME_SEC)
+
+                .withBrake()
+                .build();
+    }
+
+    public static final class kStall {
+        /**
+         * Stall detection tuning parameters for the Intake Arm.
+         *
+         * These values determine how the subsystem decides that the arm has
+         * mechanically stalled (i.e., the motors are applying effort but the
+         * mechanism is not moving). Adjusting these values changes how sensitive
+         * stall detection is.
+         *
+         * VELOCITY_THRESHOLD:
+         *   - Minimum mechanism velocity (in deg/sec) considered "moving".
+         *   - If the arm's measured velocity stays BELOW this value while effort
+         *     is being applied, it is considered "not moving".
+         *   - Increase this value → stall is detected MORE easily (more sensitive).
+         *   - Decrease this value → stall is detected LESS easily (less sensitive).
+         *
+         * EFFORT_THRESHOLD:
+         *   - Minimum applied motor voltage (in volts) considered "trying".
+         *   - If the motors are applying MORE than this voltage but velocity is low,
+         *     the subsystem considers the arm to be pushing against resistance.
+         *   - Increase this value → stall requires MORE effort to trigger (less sensitive).
+         *   - Decrease this value → stall triggers with LESS effort (more sensitive).
+         *
+         * TIME_SEC:
+         *   - Minimum duration (in seconds) that the stall condition must persist
+         *     before being considered a true stall.
+         *   - This prevents false positives from brief slowdowns, backlash, or noise.
+         *   - Increase this value → stall must last LONGER to trigger (less sensitive).
+         *   - Decrease this value → stall triggers FASTER (more sensitive).
+         *
+         * Together, these three values define the mechanical "signature" of a stall.
+         * Tune them based on real‑world behavior: heavier arms, higher friction, or
+         * slower gearboxes may require different thresholds.
+         */
+        public static final double VELOCITY_THRESHOLD = 1.0;   // deg/sec
+        public static final double EFFORT_THRESHOLD   = 2.0;   // volts
+        public static final double TIME_SEC           = 0.015;  // seconds
     }
 }
