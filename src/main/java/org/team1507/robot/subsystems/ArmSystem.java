@@ -29,7 +29,7 @@ import static org.team1507.robot.Constants.kArmMotor.*;
  *
  * <p>The subsystem exposes high‑level arm actions such as deploying,
  * retracting, and manual joystick control, while internally managing
- * soft‑limit enforcement and unit conversions.
+ * soft‑limit enforcement, stall detection, and unit conversions.
  */
 public final class ArmSystem extends Subsystem1507 {
 
@@ -45,8 +45,8 @@ public final class ArmSystem extends Subsystem1507 {
     /**
      * Creates a new dual‑motor arm subsystem.
      *
-     * <p>Both motors are configured independently using {@code CONFIG_1} and
-     * {@code CONFIG_2}, allowing one motor to be inverted while maintaining
+     * <p>Both motors are configured independently using {@code CONFIG_A} and
+     * {@code CONFIG_B}, allowing one motor to be inverted while maintaining
      * identical control behavior.
      */
     public ArmSystem() {
@@ -87,16 +87,12 @@ public final class ArmSystem extends Subsystem1507 {
         motorB.setPositionVoltage(rotations, 0.0);
     }
 
-    /**
-     * Moves the arm to its deployed (extended) position.
-     */
+    /** Moves the arm to its deployed (extended) position. */
     public void deploy() {
         setAngle(DEPLOYED_ANGLE_DEGREES);
     }
 
-    /**
-     * Moves the arm to its retracted (stowed) position.
-     */
+    /** Moves the arm to its retracted (stowed) position. */
     public void retract() {
         setAngle(RETRACTED_ANGLE_DEGREES);
     }
@@ -138,9 +134,7 @@ public final class ArmSystem extends Subsystem1507 {
         }
     }
 
-    /**
-     * Stops both arm motors immediately.
-     */
+    /** Stops both arm motors immediately. */
     public void stop() {
         motorA.stop();
         motorB.stop();
@@ -169,31 +163,30 @@ public final class ArmSystem extends Subsystem1507 {
         return targetAngleDeg;
     }
 
+    /**
+     * Returns whether the arm is physically stalled.
+     *
+     * <p>The arm is considered stalled if either motor reports a stall
+     * condition based on its configured current, velocity, and time thresholds.
+     *
+     * @return true if the arm is stalled
+     */
+    public boolean isStalled() {
+        return motorA.isStalled() || motorB.isStalled();
+    }
+
     // ============================================================
     // UTIL
     // ============================================================
 
-    /**
-     * Clamps an angle to the subsystem's mechanical limits.
-     */
     private static double clampAngle(double angleDeg) {
-        return MathUtil.clamp(
-            angleDeg,
-            MIN_ANGLE_DEGREES,
-            MAX_ANGLE_DEGREES
-        );
+        return MathUtil.clamp(angleDeg, MIN_ANGLE_DEGREES, MAX_ANGLE_DEGREES);
     }
 
-    /**
-     * Converts degrees to motor rotations.
-     */
     private static double degToRotations(double degrees) {
         return degrees / 360.0;
     }
 
-    /**
-     * Converts motor rotations to degrees.
-     */
     private static double rotationsToDeg(double rotations) {
         return rotations * 360.0;
     }
@@ -203,69 +196,59 @@ public final class ArmSystem extends Subsystem1507 {
     // ============================================================
 
     /**
-     * Creates a command that deploys the arm and holds position until interrupted.
-     *
-     * @return deploy command
+     * Creates a command that deploys the arm and finishes if stalled.
      */
     public Command deployCommand() {
         return new CommandBuilder(this)
             .named("Arm.deploy")
             .onInitialize(this::deploy)
-            .onEnd(this::stop)
+            .stallFinish(this::isStalled)
+            .onEnd((interrupted, timedOut, stalled) -> stop())
             .isFinished(false);
     }
 
     /**
-     * Creates a command that retracts the arm and holds position until interrupted.
-     *
-     * @return retract command
+     * Creates a command that retracts the arm and finishes if stalled.
      */
     public Command retractCommand() {
         return new CommandBuilder(this)
             .named("Arm.retract")
             .onInitialize(this::retract)
-            .onEnd(this::stop)
+            .stallFinish(this::isStalled)
+            .onEnd((interrupted, timedOut, stalled) -> stop())
             .isFinished(false);
     }
 
     /**
      * Creates a command that manually drives the arm upward.
-     *
-     * @return manual upward command
      */
     public Command manualUpCommand() {
         return new CommandBuilder(this)
             .named("Arm.manualUp")
-            .onExecute(() ->
-                runManual(MANUAL_POSITIVE_POWER)
-            )
-            .onEnd(this::stop);
+            .onExecute(() -> runManual(MANUAL_POSITIVE_POWER))
+            .stallFinish(this::isStalled)
+            .onEnd((interrupted, timedOut, stalled) -> stop());
     }
 
     /**
      * Creates a command that manually drives the arm downward.
-     *
-     * @return manual downward command
      */
     public Command manualDownCommand() {
         return new CommandBuilder(this)
             .named("Arm.manualDown")
-            .onExecute(() ->
-                runManual(MANUAL_NEGATIVE_POWER)
-            )
-            .onEnd(this::stop);
+            .onExecute(() -> runManual(MANUAL_NEGATIVE_POWER))
+            .stallFinish(this::isStalled)
+            .onEnd((interrupted, timedOut, stalled) -> stop());
     }
 
     /**
      * Creates a command that drives the arm manually using a joystick input.
-     *
-     * @param inputSupplier supplier providing a continuous duty‑cycle input
-     * @return joystick‑driven manual control command
      */
     public Command manualJoystickCommand(DoubleSupplier inputSupplier) {
         return new CommandBuilder(this)
             .named("Arm.manualJoystick")
             .onExecute(() -> runManual(inputSupplier.getAsDouble()))
-            .onEnd(this::stop);
+            .stallFinish(this::isStalled)
+            .onEnd((interrupted, timedOut, stalled) -> stop());
     }
 }

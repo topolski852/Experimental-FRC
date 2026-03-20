@@ -46,6 +46,13 @@ public record MotorConfig(
 
         Feedback feedback,
 
+        // ---------------------------
+        // Stall detection thresholds
+        // ---------------------------
+        double stallCurrentThreshold,
+        double stallVelocityThreshold,
+        double stallTimeSeconds,
+
         boolean brakeMode
 ) {
 
@@ -103,7 +110,14 @@ public record MotorConfig(
         private double sensorToMechanismRatio = 1.0;
         private double rotorOffset = 0.0;
 
-        private boolean brakeMode = false; // DEFAULT = COAST
+        // ---------------------------
+        // Stall defaults
+        // ---------------------------
+        private double stallCurrentThreshold = 60.0;   // amps
+        private double stallVelocityThreshold = 0.2;   // rotations/sec
+        private double stallTimeSeconds = 0.25;        // seconds
+
+        private boolean brakeMode = false;
 
         // ============================
         // Builder Methods
@@ -137,8 +151,8 @@ public record MotorConfig(
             return this;
         }
 
-        public Builder withSupplyCurrentLimit(Current statorCurrentLimit) {
-            this.statorCurrentLimit = statorCurrentLimit;
+        public Builder withSupplyCurrentLimit(Current supplyCurrentLimit) {
+            this.supplyCurrentLimit = supplyCurrentLimit;
             return this;
         }
 
@@ -190,7 +204,26 @@ public record MotorConfig(
             this.rotorOffset = offsetRotations;
             return this;
         }
-        
+
+        // ---------------------------
+        // Stall builder methods
+        // ---------------------------
+
+        public Builder withStallCurrentThreshold(double amps) {
+            this.stallCurrentThreshold = amps;
+            return this;
+        }
+
+        public Builder withStallVelocityThreshold(double rotationsPerSec) {
+            this.stallVelocityThreshold = rotationsPerSec;
+            return this;
+        }
+
+        public Builder withStallTime(double seconds) {
+            this.stallTimeSeconds = seconds;
+            return this;
+        }
+
         /** Sets the motor to brake mode. */
         public Builder withBrake() {
             this.brakeMode = true;
@@ -236,6 +269,10 @@ public record MotorConfig(
                     sensorToMechanismRatio,
                     rotorOffset
                 ),
+
+                stallCurrentThreshold,
+                stallVelocityThreshold,
+                stallTimeSeconds,
 
                 brakeMode
             );

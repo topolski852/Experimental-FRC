@@ -16,6 +16,8 @@ import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.hardware.TalonFXS;
 
+import edu.wpi.first.wpilibj.Timer;
+
 import org.team1507.lib.core.logging.InputField;
 import org.team1507.lib.core.logging.Telemetry;
 import org.team1507.lib.core.logging.TelemetryRate;
@@ -24,8 +26,9 @@ import org.team1507.lib.core.util.MotorConfig;
 /**
  * Unified CTRE motor abstraction for Team 1507.
  *
- * <p>{@code Motor1507} owns motor hardware, control, and telemetry declaration.
- * Configuration is applied declaratively via {@link MotorConfig}.
+ * <p>{@code Motor1507} owns motor hardware, control, telemetry, and
+ * mechanism‑agnostic stall detection. Configuration is applied declaratively
+ * via {@link MotorConfig}.
  */
 public final class Motor1507 {
 
@@ -34,6 +37,22 @@ public final class Motor1507 {
     private final Object motor;
     private final CtreMotorSignals signals;
     private final String name;
+
+    // ------------------------------------------------------------
+    // Stall detection fields
+    // ------------------------------------------------------------
+
+    /** Current threshold above which the motor is considered loaded. */
+    private final double stallCurrentThreshold;
+
+    /** Velocity threshold below which the motor is considered not moving. */
+    private final double stallVelocityThreshold;
+
+    /** Minimum duration the stall condition must persist. */
+    private final double stallTimeSeconds;
+
+    /** Timestamp of the last moment the motor was not stalled. */
+    private double lastNotStalledTime = 0;
 
     // ------------------------------------------------------------
     // Telemetry fields
@@ -60,6 +79,12 @@ public final class Motor1507 {
         CtreMotorConfigurator.apply(motor, configs);
 
         this.signals = CtreMotorSignals.fromMotor(motor);
+
+        // Extract stall thresholds from slot 0 config
+        MotorConfig base = configs[0];
+        this.stallCurrentThreshold = base.stallCurrentThreshold();
+        this.stallVelocityThreshold = base.stallVelocityThreshold();
+        this.stallTimeSeconds = base.stallTimeSeconds();
 
         // --------------------------------------------------------
         // Declare telemetry
@@ -100,7 +125,6 @@ public final class Motor1507 {
             signals::getDeviceTemp,
             TelemetryRate.SLOW
         );
-
 
         Telemetry.register(
             rotorPosition,
@@ -159,7 +183,7 @@ public final class Motor1507 {
     }
 
     // ============================================================
-    // OBSERVATION (mechanism-agnostic motor units)
+    // OBSERVATION
     // ============================================================
 
     public double getRotorPosition() {
@@ -184,6 +208,36 @@ public final class Motor1507 {
 
     public double getDeviceTemp() {
         return signals.getDeviceTemp();
+    }
+
+    /**
+     * Returns whether the motor is physically stalled.
+     *
+     * <p>A stall is defined as:
+     * <ul>
+     *   <li>stator current above the configured threshold</li>
+     *   <li>rotor velocity below the configured threshold</li>
+     *   <li>condition persisting longer than the configured stall time</li>
+     * </ul>
+     *
+     * <p>This method is mechanism‑agnostic and does not interpret the meaning
+     * of a stall. Subsystems should provide semantic interpretation.
+     *
+     * @return true if the motor is stalled
+     */
+    public boolean isStalled() {
+        boolean stalledNow =
+            getStatorCurrent() > stallCurrentThreshold &&
+            Math.abs(getRotorVelocity()) < stallVelocityThreshold;
+
+        double now = Timer.getFPGATimestamp();
+
+        if (!stalledNow) {
+            lastNotStalledTime = now;
+            return false;
+        }
+
+        return (now - lastNotStalledTime) > stallTimeSeconds;
     }
 
     // ============================================================
