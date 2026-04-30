@@ -42,10 +42,6 @@ public class Constants {
         public static final double STEER_GEAR_RATIO = 21.428571428571427;
         public static final double WHEEL_RADIUS_METERS = 0.049581;
 
-        // The stator current at which the wheels start to slip;
-        // This needs to be tuned to your individual robot
-        private static final Current SLIP_CURRENT = Amps.of(120);
-
         // Swerve steer azimuth does not require much torque output, so we can set a relatively low
         // stator current limit to help avoid brownouts without impacting performance.
         private static final Current STEER_STATOR_CURRENT = Amps.of(60);
