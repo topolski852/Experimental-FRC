@@ -8,11 +8,15 @@
 
 package org.team1507.lib.core.logging;
 
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.wpilibj.Timer;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -33,6 +37,8 @@ import java.util.Map;
  * command activity, timestamps, and discrete state changes.
  */
 public final class Telemetry {
+
+    private static final Map<String, StructPublisher<Pose2d>> posePublishers = new HashMap<>();
 
     /**
      * Logging period (in seconds) associated with each telemetry rate.
@@ -116,6 +122,25 @@ public final class Telemetry {
             .getEntry(key)
             .setDouble(value);
     }
+
+    /**
+     * Publishes a Pose2d as a struct so tools like AdvantageScope
+     * can visualize it directly.
+     *
+     * @param key  NetworkTables key (e.g. "Swerve/Pose")
+     * @param pose Pose2d to publish
+     */
+    public static void set(String key, Pose2d pose) {
+        StructPublisher<Pose2d> pub = posePublishers.get(key);
+
+        if (pub == null) {
+            NetworkTable table = NetworkTableInstance.getDefault().getTable(key);
+            pub = table.getStructTopic("Pose2d", Pose2d.struct).publish();
+            posePublishers.put(key, pub);
+        }
+
+        pub.set(pose);
+}
 
     /**
      * Logs a timestamped event.

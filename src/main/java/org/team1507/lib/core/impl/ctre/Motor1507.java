@@ -16,6 +16,7 @@ import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.hardware.TalonFXS;
 
+import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.Timer;
 
 import org.team1507.lib.core.logging.InputField;
@@ -67,6 +68,13 @@ public final class Motor1507 {
     public final InputField<Double> statorCurrent;
     public final InputField<Double> motorVoltage;
     public final InputField<Double> deviceTemp;
+
+    // ------------------------------------------------------------
+    // Simulated Data
+    // ------------------------------------------------------------
+    
+    private double simRotorPosition = 0.0;
+    private double simRotorVelocity = 0.0;
 
     /**
      * Creates a new motor instance and applies the provided configuration.
@@ -171,6 +179,7 @@ public final class Motor1507 {
     }
 
     public void setVelocityRPS(double motorRPS) {
+        simRotorVelocity = motorRPS; // store for sim
         setControl(new VelocityVoltage(motorRPS));
     }
 
@@ -194,10 +203,17 @@ public final class Motor1507 {
     // ============================================================
 
     public double getRotorPosition() {
+        if (RobotBase.isSimulation()) {
+            simRotorPosition += simRotorVelocity * 0.02; // integrate
+            return simRotorPosition;
+        }
         return signals.getRotorPosition();
     }
 
     public double getRotorVelocity() {
+        if (RobotBase.isSimulation()) {
+            return simRotorVelocity;
+        }
         return signals.getRotorVelocity();
     }
 

@@ -9,6 +9,8 @@
 package org.team1507.robot;
 
 import static edu.wpi.first.units.Units.Amps;
+import static edu.wpi.first.units.Units.Inches;
+import static edu.wpi.first.units.Units.MetersPerSecond;
 
 import org.team1507.lib.core.util.MotorConfig;
 import org.team1507.lib.core.util.MotorConfig.ControlMode;
@@ -16,7 +18,109 @@ import org.team1507.lib.core.util.MotorConfig.GravityType;
 
 import com.ctre.phoenix6.signals.ReverseLimitTypeValue;
 
+import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.VecBuilder;
+import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.numbers.N1;
+import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.units.measure.Current;
+import edu.wpi.first.units.measure.LinearVelocity;
+
 public class Constants {
+
+    public static final class kSwerve {
+
+        // Theoretical free speed (m/s) at 12 V applied output;
+        // This needs to be tuned to your individual robot
+        public static final LinearVelocity SPEED_AT_12_VOLTS = MetersPerSecond.of(5.04);
+
+        // Every 1 rotation of the azimuth results in kCoupleRatio drive motor turns;
+        // This may need to be tuned to your individual robot
+        public static final double COUPLE_RATIO = 3.5714285714285716;
+
+        public static final double DRIVE_GEAR_RATIO = 6.122448979591837;
+        public static final double STEER_GEAR_RATIO = 21.428571428571427;
+        public static final double WHEEL_RADIUS_METERS = 0.049581;
+
+        // The stator current at which the wheels start to slip;
+        // This needs to be tuned to your individual robot
+        private static final Current SLIP_CURRENT = Amps.of(120);
+
+        // Swerve steer azimuth does not require much torque output, so we can set a relatively low
+        // stator current limit to help avoid brownouts without impacting performance.
+        private static final Current STEER_STATOR_CURRENT = Amps.of(60);
+
+        // The standard deviation for odometry calculation
+        // in the form [x, y, theta]ᵀ, with units in meters and radians
+        public static final Matrix<N3, N1> ODOMETRY_STD_DEV = VecBuilder.fill(0.02, 0.02, 0.05);
+
+        // The standard deviation for vision calculation
+        // in the form [x, y, theta]ᵀ, with units in meters and radians
+        public static final Matrix<N3, N1> VISION_STD_DEV = VecBuilder.fill(0.02, 0.02, 0.05);
+
+        // This variable is used to modify the offset of the drivetrain in meters. *DO NOT SET TO ZERO*
+        public static final double DRIVE_METERS_SCALE = 1.0;
+        
+        public static final MotorConfig FRONT_LEFT_DRIVE_CONFIG =
+            MotorConfig.builder(ControlMode.VELOCITY)
+                .inverted(false)
+                .withPID(2.0, 0.0, 0.0)
+                .withFeedforward(0.12, 2.75, 0.32)
+                .build();
+        public static final MotorConfig FRONT_LEFT_STEER_CONFIG =
+            MotorConfig.builder(ControlMode.POSITION)
+                .inverted(true)
+                .withPID(70, 0, 0.2)
+                .withFeedforward(0.08, 2.2, 0.0)
+                .withStatorCurrentLimit(STEER_STATOR_CURRENT)
+                .build();
+        public static final Translation2d FRONT_LEFT_LOCATION = new Translation2d(Inches.of(10.7375), Inches.of(10.7375));
+
+        public static final MotorConfig FRONT_RIGHT_DRIVE_CONFIG =
+            MotorConfig.builder(ControlMode.VELOCITY)
+                .inverted(true)
+                .withPID(2.0, 0.0, 0.0)
+                .withFeedforward(0.12, 2.75, 0.32)
+                .build();
+        public static final MotorConfig FRONT_RIGHT_STEER_CONFIG =
+            MotorConfig.builder(ControlMode.POSITION)
+                .inverted(true)
+                .withPID(70, 0, 0.2)
+                .withFeedforward(0.08, 2.2, 0.0)
+                .withStatorCurrentLimit(STEER_STATOR_CURRENT)
+                .build();
+        public static final Translation2d FRONT_RIGHT_LOCATION = new Translation2d(Inches.of(10.7375), Inches.of(-10.7375));
+
+        public static final MotorConfig BACK_LEFT_DRIVE_CONFIG =
+            MotorConfig.builder(ControlMode.VELOCITY)
+                .inverted(false)
+                .withPID(2.0, 0.0, 0.0)
+                .withFeedforward(0.12, 2.75, 0.32)
+                .build();
+        public static final MotorConfig BACK_LEFT_STEER_CONFIG =
+            MotorConfig.builder(ControlMode.POSITION)
+                .inverted(true)
+                .withPID(70, 0, 0.2)
+                .withFeedforward(0.08, 2.2, 0.0)
+                .withStatorCurrentLimit(STEER_STATOR_CURRENT)
+                .build();
+        public static final Translation2d BACK_LEFT_LOCATION = new Translation2d(Inches.of(-10.7375), Inches.of(10.7375));
+
+        public static final MotorConfig BACK_RIGHT_DRIVE_CONFIG =
+            MotorConfig.builder(ControlMode.VELOCITY)
+                .inverted(true)
+                .withPID(2.0, 0.0, 0.0)
+                .withFeedforward(0.12, 2.75, 0.32)
+                .build();
+        public static final MotorConfig BACK_RIGHT_STEER_CONFIG =
+            MotorConfig.builder(ControlMode.POSITION)
+                .inverted(true)
+                .withPID(70, 0, 0.2)
+                .withFeedforward(0.08, 2.2, 0.0)
+                .withStatorCurrentLimit(STEER_STATOR_CURRENT)
+                .build();
+        public static final Translation2d BACK_RIGHT_LOCATION = new Translation2d(Inches.of(-10.7375), Inches.of(-10.7375));
+    }
 
     public static final class kBasicMotor {
         /**
