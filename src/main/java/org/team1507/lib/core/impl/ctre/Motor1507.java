@@ -233,6 +233,10 @@ public final class Motor1507 {
         return signals.getDeviceTemp();
     }
 
+    public void refresh() {
+        signals.refresh();
+    }
+
     /**
      * Returns whether the motor is physically stalled.
      *

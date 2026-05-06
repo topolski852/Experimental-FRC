@@ -96,7 +96,7 @@ public final class CtreMotorSignals {
     // REFRESH
     // ============================================================
 
-    private void refresh() {
+    public void refresh() {
         BaseStatusSignal.refreshAll(
             rotorPosition,
             rotorVelocity,
@@ -112,32 +112,26 @@ public final class CtreMotorSignals {
     // ============================================================
 
     public double getRotorPosition() {
-        refresh();
         return rotorPosition.getValueAsDouble();
     }
 
     public double getRotorVelocity() {
-        refresh();
         return rotorVelocity.getValueAsDouble();
     }
 
     public double getSupplyCurrent() {
-        refresh();
         return supplyCurrent.getValueAsDouble();
     }
 
     public double getStatorCurrent() {
-        refresh();
         return statorCurrent.getValueAsDouble();
     }
 
     public double getMotorVoltage() {
-        refresh();
         return motorVoltage.getValueAsDouble();
     }
 
     public double getDeviceTemp() {
-        refresh();
         return deviceTemp.getValueAsDouble();
     }
 }

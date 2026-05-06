@@ -16,6 +16,7 @@ import org.team1507.lib.core.util.MotorConfig;
 import org.team1507.lib.core.util.MotorConfig.ControlMode;
 import org.team1507.lib.core.util.MotorConfig.GravityType;
 
+import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import com.ctre.phoenix6.signals.ReverseLimitTypeValue;
 
 import edu.wpi.first.math.Matrix;
@@ -69,6 +70,10 @@ public class Constants {
                 .withPID(70, 0, 0.2)
                 .withFeedforward(0.08, 2.2, 0.0)
                 .withStatorCurrentLimit(STEER_STATOR_CURRENT)
+                .withFeedbackSensor(FeedbackSensorSourceValue.RemoteCANcoder)
+                .withRemoteSensorId(9)
+                .withSensorToMechanismRatio(1.0)
+                .withContinuousWrap()
                 .build();
         public static final Translation2d FRONT_LEFT_LOCATION = new Translation2d(Inches.of(10.7375), Inches.of(10.7375));
 
@@ -84,6 +89,10 @@ public class Constants {
                 .withPID(70, 0, 0.2)
                 .withFeedforward(0.08, 2.2, 0.0)
                 .withStatorCurrentLimit(STEER_STATOR_CURRENT)
+                .withFeedbackSensor(FeedbackSensorSourceValue.RemoteCANcoder)
+                .withRemoteSensorId(3)
+                .withSensorToMechanismRatio(1.0)
+                .withContinuousWrap()
                 .build();
         public static final Translation2d FRONT_RIGHT_LOCATION = new Translation2d(Inches.of(10.7375), Inches.of(-10.7375));
 
@@ -99,6 +108,10 @@ public class Constants {
                 .withPID(70, 0, 0.2)
                 .withFeedforward(0.08, 2.2, 0.0)
                 .withStatorCurrentLimit(STEER_STATOR_CURRENT)
+                .withFeedbackSensor(FeedbackSensorSourceValue.RemoteCANcoder)
+                .withRemoteSensorId(6)
+                .withSensorToMechanismRatio(1.0)
+                .withContinuousWrap()
                 .build();
         public static final Translation2d BACK_LEFT_LOCATION = new Translation2d(Inches.of(-10.7375), Inches.of(10.7375));
 
@@ -114,6 +127,10 @@ public class Constants {
                 .withPID(70, 0, 0.2)
                 .withFeedforward(0.08, 2.2, 0.0)
                 .withStatorCurrentLimit(STEER_STATOR_CURRENT)
+                .withFeedbackSensor(FeedbackSensorSourceValue.RemoteCANcoder)
+                .withRemoteSensorId(12)
+                .withSensorToMechanismRatio(1.0)
+                .withContinuousWrap()
                 .build();
         public static final Translation2d BACK_RIGHT_LOCATION = new Translation2d(Inches.of(-10.7375), Inches.of(-10.7375));
     }

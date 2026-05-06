@@ -30,6 +30,12 @@ public final class BasicMotor extends Subsystem1507 {
         );
     }
 
+    @Override
+    public void periodic() {
+        // Refresh signals once — all reads this loop are now fresh
+        motor.refresh();
+    }
+
     public void runForward() {
         motor.runDuty(kBasicMotor.DUTY_FORWARD);
     }

@@ -53,7 +53,8 @@ public record MotorConfig(
         double stallVelocityThreshold,
         double stallTimeSeconds,
 
-        boolean brakeMode
+        boolean brakeMode,
+        boolean continuousWrap
 ) {
 
     public static enum ControlMode { DUTY_CYCLE, VELOCITY, POSITION, MOTION_MAGIC }
@@ -118,6 +119,8 @@ public record MotorConfig(
         private double stallTimeSeconds = 0.25;        // seconds
 
         private boolean brakeMode = false;
+
+        private boolean continuousWrap = false;
 
         // ============================
         // Builder Methods
@@ -236,6 +239,11 @@ public record MotorConfig(
             return this;
         }
 
+        public Builder withContinuousWrap() {
+            this.continuousWrap = true;
+            return this;
+        }
+
         // ============================
         // Build
         // ============================
@@ -274,7 +282,9 @@ public record MotorConfig(
                 stallVelocityThreshold,
                 stallTimeSeconds,
 
-                brakeMode
+                brakeMode,
+
+                continuousWrap
             );
         }
     }

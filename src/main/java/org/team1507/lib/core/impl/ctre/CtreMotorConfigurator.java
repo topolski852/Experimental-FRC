@@ -272,6 +272,8 @@ public final class CtreMotorConfigurator {
         applyLimitSwitches(cfg.HardwareLimitSwitch, base);
         applyCurrentLimits(cfg.CurrentLimits, base);
         applyFeedback(cfg.Feedback, base.feedback());
+
+        cfg.ClosedLoopGeneral.ContinuousWrap = base.continuousWrap();
     }
 
     /**
@@ -288,6 +290,8 @@ public final class CtreMotorConfigurator {
         applyLimitSwitches(cfg.HardwareLimitSwitch, base);
         applyCurrentLimits(cfg.CurrentLimits, base);
         applyExternalFeedback(cfg.ExternalFeedback, base.feedback());
+
+        cfg.ClosedLoopGeneral.ContinuousWrap = base.continuousWrap();
     }
 
     /**

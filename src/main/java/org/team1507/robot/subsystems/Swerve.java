@@ -1,3 +1,11 @@
+//  ██╗    ██╗ █████╗ ██████╗ ██╗      ██████╗  ██████╗██╗  ██╗███████╗
+//  ██║    ██║██╔══██╗██╔══██╗██║     ██╔═══██╗██╔════╝██║ ██╔╝██╔════╝
+//  ██║ █╗ ██║███████║██████╔╝██║     ██║   ██║██║     █████╔╝ ███████╗
+//  ██║███╗██║██╔══██║██╔══██╗██║     ██║   ██║██║     ██╔═██╗ ╚════██║
+//  ╚███╔███╔╝██║  ██║██║  ██║███████╗╚██████╔╝╚██████╗██║  ██╗███████║
+//   ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚══════╝
+//                           TEAM 1507 WARLOCKS
+
 package org.team1507.robot.subsystems;
 
 import edu.wpi.first.math.Matrix;
@@ -109,6 +117,13 @@ public final class Swerve extends SubsystemBase {
 
     @Override
     public void periodic() {
+
+        // Refresh all motor signals once per loop — before any reads
+        frontLeft.refreshSignals();
+        frontRight.refreshSignals();
+        backLeft.refreshSignals();
+        backRight.refreshSignals();
+
         pose = poseEstimator.update(
             getHeading(),
             getModulePositions()

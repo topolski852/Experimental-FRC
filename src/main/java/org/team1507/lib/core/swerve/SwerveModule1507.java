@@ -1,3 +1,11 @@
+//  ██╗    ██╗ █████╗ ██████╗ ██╗      ██████╗  ██████╗██╗  ██╗███████╗
+//  ██║    ██║██╔══██╗██╔══██╗██║     ██╔═══██╗██╔════╝██║ ██╔╝██╔════╝
+//  ██║ █╗ ██║███████║██████╔╝██║     ██║   ██║██║     █████╔╝ ███████╗
+//  ██║███╗██║██╔══██║██╔══██╗██║     ██║   ██║██║     ██╔═██╗ ╚════██║
+//  ╚███╔███╔╝██║  ██║██║  ██║███████╗╚██████╔╝╚██████╗██║  ██╗███████║
+//   ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚══════╝
+//                           TEAM 1507 WARLOCKS
+
 package org.team1507.lib.core.swerve;
 
 import static edu.wpi.first.units.Units.*;
@@ -97,7 +105,7 @@ public final class SwerveModule1507 {
         drive.setVelocityRPS(driveRps);
 
         steer.setPositionVoltage(
-            targetAngle.getRotations() * math.steerGearRatio(),
+            targetAngle.getRotations(),
             0.0
         );
 
@@ -144,6 +152,11 @@ public final class SwerveModule1507 {
             * driveMetersScale;
 
         return new SwerveModulePosition(meters, getAngle());
+    }
+
+    public void refreshSignals() {
+        drive.refresh();
+        steer.refresh();
     }
 
     // ============================================================

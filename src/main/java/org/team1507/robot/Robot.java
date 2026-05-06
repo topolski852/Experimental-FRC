@@ -14,7 +14,6 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 
 import com.ctre.phoenix6.hardware.CANcoder;
@@ -24,7 +23,6 @@ import static edu.wpi.first.units.Units.Rotations;
 
 import org.team1507.lib.core.framework.LoggedRobot;
 import org.team1507.lib.core.impl.ctre.Motor1507;
-import org.team1507.lib.core.logging.Telemetry;
 import org.team1507.lib.core.swerve.SwerveModule1507;
 import org.team1507.lib.core.swerve.SwerveModule1507.MathConfig;
 import org.team1507.robot.subsystems.*;
@@ -33,9 +31,6 @@ import org.team1507.robot.auto.routines.DriveForwardAuto;
 import org.team1507.robot.Constants.kSwerve;
 
 public final class Robot extends LoggedRobot {
-
-    private final CommandScheduler scheduler = CommandScheduler.getInstance();
-
     // ------------------------------------------------------------
     // Subsystems
     // ------------------------------------------------------------
@@ -134,27 +129,13 @@ public final class Robot extends LoggedRobot {
                 double y = MathUtil.applyDeadband(-driver.getLeftX(), 0.12);
                 double rot = MathUtil.applyDeadband(-driver.getRightX(), 0.12);
 
-                return new ChassisSpeeds(
+                return ChassisSpeeds.fromFieldRelativeSpeeds(
                     x * kSwerve.SPEED_AT_12_VOLTS.magnitude(),
                     y * kSwerve.SPEED_AT_12_VOLTS.magnitude(),
-                    rot * Math.PI
+                    rot * Math.PI,
+                    swerve.getHeading()
                 );
             })
         );
-
-        // Arm manual control
-        arm.setDefaultCommand(
-            arm.manualJoystickCommand(() -> -driver.getLeftY())
-        );
-    }
-
-    // ------------------------------------------------------------
-    // Periodic
-    // ------------------------------------------------------------
-
-    @Override
-    public void robotPeriodic() {
-        scheduler.run();
-        Telemetry.update();
     }
 }

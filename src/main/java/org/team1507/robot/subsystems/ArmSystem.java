@@ -15,6 +15,7 @@ import java.util.function.DoubleSupplier;
 
 import org.team1507.lib.core.framework.Subsystem1507;
 import org.team1507.lib.core.impl.ctre.Motor1507;
+import org.team1507.lib.core.logging.Telemetry;
 import org.team1507.lib.core.util.CommandBuilder;
 
 import static org.team1507.robot.Constants.kArmMotor.*;
@@ -65,6 +66,16 @@ public final class ArmSystem extends Subsystem1507 {
             22,
             CONFIG_B
         );
+    }
+
+    @Override
+    public void periodic() {
+        motorA.refresh();
+        motorB.refresh();
+
+        Telemetry.set("Arm/AngleDegrees", getCurrentAngle());
+        Telemetry.set("Arm/TargetDegrees", getTargetAngle());
+        Telemetry.set("Arm/Stalled", isStalled());
     }
 
     // ============================================================
