@@ -31,6 +31,7 @@ import org.team1507.robot.auto.routines.DriveForwardAuto;
 import org.team1507.robot.Constants.kSwerve;
 
 public final class Robot extends LoggedRobot {
+
     // ------------------------------------------------------------
     // Subsystems
     // ------------------------------------------------------------
@@ -49,6 +50,7 @@ public final class Robot extends LoggedRobot {
     // Auto
     // ------------------------------------------------------------
 
+    private Command m_autoCommand = null;
     private final SendableChooser<Command> autoChooser =
         new SendableChooser<>();
 
@@ -137,5 +139,20 @@ public final class Robot extends LoggedRobot {
                 );
             })
         );
+    }
+
+    @Override
+    public void autonomousInit() {
+        m_autoCommand = autoChooser.getSelected();
+        if (m_autoCommand != null) {
+            m_autoCommand.schedule();
+        }
+    }
+
+    @Override
+    public void teleopInit() {
+        if (m_autoCommand != null) {
+            m_autoCommand.cancel();
+        }
     }
 }

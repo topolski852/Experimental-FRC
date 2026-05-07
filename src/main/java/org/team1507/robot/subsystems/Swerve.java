@@ -194,14 +194,9 @@ public final class Swerve extends SubsystemBase {
             .withName("Swerve.drive()");
     }
 
-    public Command driveForTime(
-        ChassisSpeeds speeds,
-        double seconds
-    ) {
+    public Command driveCommand(ChassisSpeeds speeds) {
         return run(() -> drive(speeds))
-            .withTimeout(seconds)
-            .finallyDo(interrupted -> stop())
-            .withName("Swerve.driveForTime()");
+            .withName("Swerve.drive()");
     }
 
     public Command stopCommand() {

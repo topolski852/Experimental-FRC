@@ -40,7 +40,7 @@ public final class AutoSequence {
         ChassisSpeeds speeds,
         double seconds
     ) {
-        steps.add(swerve.driveForTime(speeds, seconds));
+        steps.add(swerve.driveCommand(speeds));
         return this;
     }
 
