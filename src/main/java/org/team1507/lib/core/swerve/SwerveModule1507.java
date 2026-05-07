@@ -13,12 +13,16 @@ import static edu.wpi.first.units.Units.*;
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.hardware.CANcoder;
+import com.ctre.phoenix6.sim.CANcoderSimState;
+import com.ctre.phoenix6.sim.TalonFXSimState;
+import com.ctre.phoenix6.hardware.TalonFX;
 
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.wpilibj.RobotBase;
 
 import org.team1507.lib.core.impl.ctre.Motor1507;
 import org.team1507.lib.core.logging.Telemetry;
@@ -47,6 +51,11 @@ public final class SwerveModule1507 {
     private final double driveMetersScale;
 
     private Rotation2d lastAngle = Rotation2d.kZero;
+
+    // Sim state
+    private double simSteerAngleRotations = 0.0;
+    private double simDriveVelocityRps = 0.0;
+    private double simDrivePositionRotations = 0.0;
 
     private final StatusSignal<Angle> absPosition;
     private final StatusSignal<AngularVelocity> azimuthVelocity;
@@ -109,6 +118,13 @@ public final class SwerveModule1507 {
             0.0
         );
 
+        // In sim, instantly snap to the target so getAngle() returns
+        // the correct value next loop — simulates a perfect steer controller
+        if (RobotBase.isSimulation()) {
+            simSteerAngleRotations = targetAngle.getRotations();
+            simDriveVelocityRps = driveRps / math.driveGearRatio();
+        }
+
         lastAngle = targetAngle;
 
         Telemetry.set(key("Drive/TargetMps"), optimized.speedMetersPerSecond);
@@ -119,6 +135,31 @@ public final class SwerveModule1507 {
     public void stop() {
         drive.stop();
         steer.stop();
+
+        if (RobotBase.isSimulation()) {
+            simDriveVelocityRps = 0.0;
+        }
+    }
+
+    // ============================================================
+    // Simulation Update
+    // ============================================================
+
+    /**
+     * Called every loop from Swerve.simulationPeriodic().
+     * Updates the CANcoder sim state so getAngle() returns real values,
+     * and integrates drive position.
+     */
+    public void simulationUpdate(double dtSeconds) {
+        // Update CANcoder sim state so absPosition signal reads correctly
+        CANcoderSimState encoderSim = encoder.getSimState();
+        encoderSim.setRawPosition(
+            simSteerAngleRotations + encoderOffset.getRotations()
+        );
+        encoderSim.setVelocity(0.0);
+
+        // Integrate drive position
+        simDrivePositionRotations += simDriveVelocityRps * dtSeconds;
     }
 
     // ============================================================
@@ -126,35 +167,43 @@ public final class SwerveModule1507 {
     // ============================================================
 
     public Rotation2d getAngle() {
+        if (RobotBase.isSimulation()) {
+            return Rotation2d.fromRotations(simSteerAngleRotations);
+        }
         double rotations = absPosition.getValue().in(Rotations);
         return Rotation2d.fromRotations(rotations).minus(encoderOffset);
     }
 
     private double azimuthRotationsRaw() {
+        if (RobotBase.isSimulation()) {
+            return simSteerAngleRotations + encoderOffset.getRotations();
+        }
         return absPosition.getValue().in(Rotations);
     }
 
     private double azimuthRpsRaw() {
-        return azimuthVelocity.getValue().in(RotationsPerSecond);
+        return RobotBase.isSimulation() ? 0.0
+            : azimuthVelocity.getValue().in(RotationsPerSecond);
     }
 
     public SwerveModuleState getState() {
-        double mps =
-            wheelRpsToMetersPerSecond(correctedWheelRps())
-            * driveMetersScale;
+        double mps = RobotBase.isSimulation()
+            ? simDriveVelocityRps * math.wheelCircumferenceMeters()
+            : wheelRpsToMetersPerSecond(correctedWheelRps()) * driveMetersScale;
 
         return new SwerveModuleState(mps, getAngle());
     }
 
     public SwerveModulePosition getPosition() {
-        double meters =
-            wheelRotationsToMeters(correctedWheelRotations())
-            * driveMetersScale;
+        double meters = RobotBase.isSimulation()
+            ? simDrivePositionRotations * math.wheelCircumferenceMeters()
+            : wheelRotationsToMeters(correctedWheelRotations()) * driveMetersScale;
 
         return new SwerveModulePosition(meters, getAngle());
     }
 
     public void refreshSignals() {
+        if (RobotBase.isSimulation()) return; // no-op in sim
         drive.refresh();
         steer.refresh();
     }

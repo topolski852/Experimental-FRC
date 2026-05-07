@@ -17,6 +17,7 @@ import edu.wpi.first.math.kinematics.*;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
@@ -27,6 +28,7 @@ import java.util.function.Supplier;
 import org.team1507.lib.core.logging.Telemetry;
 import org.team1507.lib.core.swerve.SwerveModule1507;
 
+import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.hardware.Pigeon2;
 
@@ -117,12 +119,16 @@ public final class Swerve extends SubsystemBase {
 
     @Override
     public void periodic() {
-
-        // Refresh all motor signals once per loop — before any reads
-        frontLeft.refreshSignals();
-        frontRight.refreshSignals();
-        backLeft.refreshSignals();
-        backRight.refreshSignals();
+        if (RobotBase.isSimulation()) {
+            // Refresh yaw signal so getHeading() picks up sim state writes
+            BaseStatusSignal.refreshAll(yaw);
+        } else {
+            frontLeft.refreshSignals();
+            frontRight.refreshSignals();
+            backLeft.refreshSignals();
+            backRight.refreshSignals();
+            BaseStatusSignal.refreshAll(yaw);
+        }
 
         pose = poseEstimator.update(
             getHeading(),
@@ -130,20 +136,26 @@ public final class Swerve extends SubsystemBase {
         );
 
         Telemetry.set("Swerve", pose);
-
         Telemetry.set("Swerve/DriveStalled", isAnyDriveStalled());
         Telemetry.set("Swerve/SteerStalled", isAnySteerStalled());
     }
 
     @Override
     public void simulationPeriodic() {
-        // Compute chassis speeds from module states
+        frontLeft.simulationUpdate(0.02);
+        frontRight.simulationUpdate(0.02);
+        backLeft.simulationUpdate(0.02);
+        backRight.simulationUpdate(0.02);
+
         ChassisSpeeds speeds = kinematics.toChassisSpeeds(getModuleStates());
 
-        // Integrate angular velocity
-        simHeadingRadians += speeds.omegaRadiansPerSecond * 0.02;
+        // ADD THIS temporarily
+        Telemetry.set("Swerve/Sim/OmegaRadsPerSec", speeds.omegaRadiansPerSecond);
+        Telemetry.set("Swerve/Sim/VxMps", speeds.vxMetersPerSecond);
+        Telemetry.set("Swerve/Sim/VyMps", speeds.vyMetersPerSecond);
+        Telemetry.set("Swerve/Sim/HeadingDeg", Math.toDegrees(simHeadingRadians));
 
-        // Write to Pigeon sim state
+        simHeadingRadians += speeds.omegaRadiansPerSecond * 0.02;
         pigeon.getSimState().setRawYaw(simHeadingRadians * 180.0 / Math.PI);
     }
 
