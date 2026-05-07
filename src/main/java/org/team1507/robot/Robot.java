@@ -26,8 +26,9 @@ import org.team1507.lib.core.impl.ctre.Motor1507;
 import org.team1507.lib.core.swerve.SwerveModule1507;
 import org.team1507.lib.core.swerve.SwerveModule1507.MathConfig;
 import org.team1507.robot.subsystems.*;
+import org.team1507.robot.auto.AutoBuilder;
 import org.team1507.robot.auto.routines.DriveForwardAuto;
-
+import org.team1507.robot.auto.routines.ScoreAndDriveAuto;
 import org.team1507.robot.Constants.kSwerve;
 
 public final class Robot extends LoggedRobot {
@@ -92,9 +93,17 @@ public final class Robot extends LoggedRobot {
             kSwerve.VISION_STD_DEV);
 
         // Initialize Autos
+
+        AutoBuilder.init(swerve, arm, basicMotor);
+
         autoChooser.setDefaultOption(
             "Drive Forward",
-            DriveForwardAuto.build(swerve)
+            DriveForwardAuto.build()
+        );
+
+        autoChooser.addOption(
+            "Score and Drive",
+            ScoreAndDriveAuto.build()
         );
         
         SmartDashboard.putData("Auto Mode", autoChooser);
@@ -120,6 +129,10 @@ public final class Robot extends LoggedRobot {
         // Arm position examples
         driver.x().onTrue(arm.deployCommand());
         driver.y().onTrue(arm.retractCommand());
+
+        driver.start().onTrue(swerve.lockCommand());
+
+        driver.back().onTrue(swerve.stopCommand());
     }
 
     private void configureDefaultBindings() {

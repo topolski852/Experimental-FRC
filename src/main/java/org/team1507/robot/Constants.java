@@ -133,6 +133,50 @@ public class Constants {
                 .withContinuousWrap()
                 .build();
         public static final Translation2d BACK_RIGHT_LOCATION = new Translation2d(Inches.of(-10.7375), Inches.of(-10.7375));
+
+        public static final class kTunning {
+            // ============================================================
+            // Tuning Constants
+            //
+            // All drive command tuning lives here. Students know exactly
+            // where to look when something needs adjustment.
+            // ============================================================
+        
+            /** Proportional gain for simple heading control (rad/s per radian of error). */
+            public static final double HEADING_KP = 5.5;
+        
+            /** PID gains for the rotation controller in moveThroughPose. */
+            public static final double THETA_KP = 4.0;
+            public static final double THETA_KI = 0.0;
+            public static final double THETA_KD = 0.1;
+        
+            /**
+             * Default pass radius for moveThroughPose (meters).
+             * How close the robot must get before the waypoint is considered "passed".
+             * Larger = passes through sooner. Smaller = more precise.
+             */
+            public static final double MOVE_THROUGH_DEFAULT_RADIUS = 0.3;
+        
+            /**
+             * Stall detection thresholds for moveThroughPose.
+             * If the robot moves less than STALL_THRESHOLD meters over STALL_TIMEOUT seconds,
+             * the command finishes anyway to prevent the robot from getting permanently stuck.
+             */
+            public static final double STALL_THRESHOLD = 0.02; // meters
+            public static final double STALL_TIMEOUT   = 1.5;  // seconds
+        
+            /** Finish distance for driveToPoint / driveForwardMeters (meters). */
+            public static final double ARRIVE_THRESHOLD = 0.05; // 5 cm
+        
+            /** Finish angle tolerance for pointToTarget / changeHeading (degrees). */
+            public static final double HEADING_TOLERANCE_DEG = 5.0;
+        
+            /**
+             * Lead time for motion compensation in maintainHeadingToTarget (seconds).
+             * Increase if shots lag while moving. Decrease if shots lead too far.
+             */
+            public static final double AIM_LEAD_TIME = 0.25;
+        }
     }
 
     public static final class kBasicMotor {

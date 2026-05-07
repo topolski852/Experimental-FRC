@@ -43,6 +43,9 @@ public final class ArmSystem extends Subsystem1507 {
     /** Last commanded arm angle in degrees. */
     private double targetAngleDeg = RETRACTED_ANGLE_DEGREES;
 
+    /** */
+    public static enum Position { STOW, LOW, MID, HIGH }
+
     /**
      * Creates a new dual‑motor arm subsystem.
      *
@@ -228,6 +231,22 @@ public final class ArmSystem extends Subsystem1507 {
             .stallFinish(this::isStalled)
             .onEnd((interrupted, timedOut, stalled) -> stop())
             .isFinished(false);
+    }
+
+    /**
+     * Creates a command that drives the arm manually using a joystick input.
+     */
+    public Command goToCommand(Position position) {
+        return new CommandBuilder(this)
+            .named("Arm.manualJoystick")
+            .onExecute(() -> {
+                if(position == Position.LOW) setAngle(RETRACTED_ANGLE_DEGREES);
+                if(position == Position.MID) setAngle(DEPLOYED_ANGLE_DEGREES);
+                if(position == Position.HIGH) setAngle(DEPLOYED_ANGLE_DEGREES);
+                if(position == Position.STOW) setAngle(RETRACTED_ANGLE_DEGREES);
+            })
+            .stallFinish(this::isStalled)
+            .onEnd((interrupted, timedOut, stalled) -> stop());
     }
 
     /**

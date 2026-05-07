@@ -65,4 +65,10 @@ public final class BasicMotor extends Subsystem1507 {
             .onExecute(this::runReverse)
             .onEnd(this::stop);
     }
+
+    public Command stopCommand() {
+        return new CommandBuilder(this)
+            .named("BasicMotor.stop")
+            .onInitialize(this::stop);
+    }
 }
