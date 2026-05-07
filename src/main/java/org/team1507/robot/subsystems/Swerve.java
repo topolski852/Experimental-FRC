@@ -138,6 +138,7 @@ public final class Swerve extends SubsystemBase {
         Telemetry.set("Swerve", pose);
         Telemetry.set("Swerve/DriveStalled", isAnyDriveStalled());
         Telemetry.set("Swerve/SteerStalled", isAnySteerStalled());
+        Telemetry.set("ModuleStates", getModuleStates());
     }
 
     @Override

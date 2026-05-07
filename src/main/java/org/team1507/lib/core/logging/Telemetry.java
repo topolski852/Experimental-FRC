@@ -13,6 +13,8 @@ import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.networktables.StructArrayPublisher;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -60,6 +62,8 @@ public final class Telemetry {
      */
     private static final Map<TelemetryRate, Double> lastUpdateTime =
         new EnumMap<>(TelemetryRate.class);
+
+    private static final Map<String, StructArrayPublisher<SwerveModuleState>> moduleStatePublishers = new HashMap<>();
 
     private Telemetry() {}
 
@@ -140,7 +144,19 @@ public final class Telemetry {
         }
 
         pub.set(pose);
-}
+    }
+
+    public static void set(String key, SwerveModuleState[] states) {
+        StructArrayPublisher<SwerveModuleState> pub = moduleStatePublishers.get(key);
+
+        if (pub == null) {
+            NetworkTable table = NetworkTableInstance.getDefault().getTable("Swerve");
+            pub = table.getStructArrayTopic(key, SwerveModuleState.struct).publish();
+            moduleStatePublishers.put(key, pub);
+        }
+
+        pub.set(states);
+    }
 
     /**
      * Logs a timestamped event.
