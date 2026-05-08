@@ -28,7 +28,6 @@ import org.team1507.lib.core.swerve.SwerveModule1507.MathConfig;
 import org.team1507.robot.subsystems.*;
 import org.team1507.robot.auto.AutoBuilder;
 import org.team1507.robot.auto.routines.DriveForwardAuto;
-import org.team1507.robot.auto.routines.ScoreAndDriveAuto;
 import org.team1507.robot.Constants.kSwerve;
 
 public final class Robot extends LoggedRobot {
@@ -88,7 +87,8 @@ public final class Robot extends LoggedRobot {
             kSwerve.BACK_LEFT_LOCATION,
             kSwerve.BACK_RIGHT_LOCATION,
             new Pigeon2(30),
-            kSwerve.SPEED_AT_12_VOLTS.magnitude(),
+            kSwerve.SPEED_AT_12_VOLTS.magnitude(), // Max Speed (meters per second)
+            kSwerve.SPEED_AT_12_VOLTS.magnitude(), // Max Angular Speed (radians)
             kSwerve.ODOMETRY_STD_DEV,
             kSwerve.VISION_STD_DEV);
 
@@ -99,11 +99,6 @@ public final class Robot extends LoggedRobot {
         autoChooser.setDefaultOption(
             "Drive Forward",
             DriveForwardAuto.build()
-        );
-
-        autoChooser.addOption(
-            "Score and Drive",
-            ScoreAndDriveAuto.build()
         );
         
         SmartDashboard.putData("Auto Mode", autoChooser);

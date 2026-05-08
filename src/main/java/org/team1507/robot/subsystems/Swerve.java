@@ -72,6 +72,7 @@ public final class Swerve extends SubsystemBase {
     private final SwerveModulePosition[] modulePositions = new SwerveModulePosition[4];
 
     private final double maxSpeedMetersPerSecond;
+    private final double maxAngularMetersPerSecond;
 
     /**
      * Temporary pose used by driveForwardMeters.
@@ -100,6 +101,7 @@ public final class Swerve extends SubsystemBase {
         Translation2d brLocation,
         Pigeon2 pigeon,
         double maxSpeedMetersPerSecond,
+        double maxAngularMetersPerSecond,
         Matrix<N3, N1> odometryStdDevs,
         Matrix<N3, N1> visionStdDevs
     ) {
@@ -109,6 +111,7 @@ public final class Swerve extends SubsystemBase {
         this.backRight = backRight;
         this.pigeon = pigeon;
         this.maxSpeedMetersPerSecond = maxSpeedMetersPerSecond;
+        this.maxAngularMetersPerSecond = maxAngularMetersPerSecond;
 
         this.yaw = pigeon.getYaw();
 
@@ -265,6 +268,14 @@ public final class Swerve extends SubsystemBase {
 
     public Pose2d getTemporaryTargetPose() {
         return temporaryTargetPose;
+    }
+
+    public double getMaxSpeed() {
+        return maxSpeedMetersPerSecond;
+    }
+
+    public double getMaxAngular() {
+        return maxAngularMetersPerSecond;
     }
 
     // ============================================================

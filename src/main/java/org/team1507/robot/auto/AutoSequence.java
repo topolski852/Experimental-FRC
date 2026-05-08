@@ -15,10 +15,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+
+import org.team1507.robot.subsystems.ArmSystem.Position;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AutoSequence
@@ -118,7 +120,7 @@ public final class AutoSequence {
      */
     public AutoSequence withSpeed(double speedMetersPerSec) {
         this.nextSpeedOverride   = speedMetersPerSec;
-        this.nextAngularOverride = AutoBuilder.MAX_ANGULAR_RATE;
+        this.nextAngularOverride = AutoBuilder.swerve.getMaxAngular();
         return this;
     }
 
@@ -136,7 +138,7 @@ public final class AutoSequence {
      * Good for approach paths where precision matters.
      */
     public AutoSequence slow() {
-        this.nextSpeedOverride   = AutoBuilder.MAX_SPEED * 0.5;
+        this.nextSpeedOverride   = AutoBuilder.swerve.getMaxSpeed() * 0.5;
         this.nextAngularOverride = RotationsPerSecond.of(0.75).in(RadiansPerSecond);
         return this;
     }
@@ -146,21 +148,21 @@ public final class AutoSequence {
      * Good for final alignment steps or tight corridor navigation.
      */
     public AutoSequence creep() {
-        this.nextSpeedOverride   = AutoBuilder.MAX_SPEED * 0.3;
+        this.nextSpeedOverride   = AutoBuilder.swerve.getMaxSpeed() * 0.3;
         this.nextAngularOverride = RotationsPerSecond.of(0.50).in(RadiansPerSecond);
         return this;
     }
 
     // Internal helper — reads and clears the speed override for one step.
     private double consumeSpeed() {
-        double speed = (nextSpeedOverride != null) ? nextSpeedOverride : AutoBuilder.MAX_SPEED;
+        double speed = (nextSpeedOverride != null) ? nextSpeedOverride : AutoBuilder.swerve.getMaxSpeed();
         nextSpeedOverride   = null;
         nextAngularOverride = null;
         return speed;
     }
 
     private double consumeAngular() {
-        double angular = (nextAngularOverride != null) ? nextAngularOverride : AutoBuilder.MAX_ANGULAR_RATE;
+        double angular = (nextAngularOverride != null) ? nextAngularOverride : AutoBuilder.swerve.getMaxAngular();
         // Note: nextAngularOverride is already cleared by consumeSpeed().
         // If using consumeAngular() independently, clear here too:
         nextAngularOverride = null;
@@ -177,60 +179,23 @@ public final class AutoSequence {
      * Always call this as the first step in an auto routine.
      */
     public AutoSequence resetPose(Pose2d pose) {
-        steps.add(AutoBuilder.resetPose(pose));
+        steps.add(AutoBuilder.swerve.resetPoseCommand(pose));
         return this;
     }
 
-    /**
-     * Drives field-relative for a fixed duration.
-     * Respects any active speed modifier (.withSpeed, .slow, .creep).
-     *
-     * @param xMetersPerSec  Forward speed (positive = away from driver wall).
-     * @param yMetersPerSec  Strafe speed (positive = left).
-     * @param rotRadPerSec   Rotation in radians/sec.
-     * @param seconds        How long to drive.
-     */
-    public AutoSequence driveFieldRelative(
-        double xMetersPerSec,
-        double yMetersPerSec,
-        double rotRadPerSec,
-        double seconds
-    ) {
-        double speedScale = consumeSpeed() / AutoBuilder.MAX_SPEED;
-        steps.add(AutoBuilder.driveFieldRelative(
-            xMetersPerSec * speedScale,
-            yMetersPerSec * speedScale,
-            rotRadPerSec,
-            seconds
-        ));
+    public AutoSequence driveForwardMeters(double distanceMeters, double velocity, boolean stopAtEnd) {
+        steps.add(AutoBuilder.swerve.driveForwardMeters(distanceMeters, velocity, stopAtEnd));
         return this;
     }
 
-    /**
-     * Drives robot-relative (ignores field heading) for a fixed duration.
-     * Useful when field orientation doesn't matter, e.g. backing away from a wall.
-     */
-    public AutoSequence driveRobotRelative(
-        double xMetersPerSec,
-        double yMetersPerSec,
-        double rotRadPerSec,
-        double seconds
-    ) {
-        double speedScale = consumeSpeed() / AutoBuilder.MAX_SPEED;
-        steps.add(AutoBuilder.driveForTime(
-            new ChassisSpeeds(
-                xMetersPerSec * speedScale,
-                yMetersPerSec * speedScale,
-                rotRadPerSec
-            ),
-            seconds
-        ));
+    public AutoSequence changeHeading(double heading) {
+        steps.add(AutoBuilder.swerve.changeHeading(new Pose2d(0.0, 0.0, new Rotation2d(heading))));
         return this;
     }
 
     /** Stops all swerve modules. */
     public AutoSequence stop() {
-        steps.add(AutoBuilder.stop());
+        steps.add(AutoBuilder.swerve.stopCommand());
         return this;
     }
 
@@ -243,19 +208,19 @@ public final class AutoSequence {
 
     /** Moves the arm to the HIGH position and waits until it arrives. */
     public AutoSequence armHigh() {
-        steps.add(AutoBuilder.armHigh());
+        steps.add(AutoBuilder.arm.goToCommand(Position.HIGH));
         return this;
     }
 
     /** Moves the arm to the MID position and waits until it arrives. */
     public AutoSequence armMid() {
-        steps.add(AutoBuilder.armMid());
+        steps.add(AutoBuilder.arm.goToCommand(Position.MID));
         return this;
     }
 
     /** Returns the arm to STOW and waits until it arrives. */
     public AutoSequence armStow() {
-        steps.add(AutoBuilder.armStow());
+        steps.add(AutoBuilder.arm.goToCommand(Position.STOW));
         return this;
     }
 
@@ -268,19 +233,19 @@ public final class AutoSequence {
 
     /** Runs the basic motor forward. */
     public AutoSequence motorForward() {
-        steps.add(AutoBuilder.motorForward());
+        steps.add(AutoBuilder.basicMotor.runForwardCommand());
         return this;
     }
 
     /** Runs the basic motor in reverse. */
     public AutoSequence motorReverse() {
-        steps.add(AutoBuilder.motorReverse());
+        steps.add(AutoBuilder.basicMotor.runReverseCommand());
         return this;
     }
 
     /** Stops the basic motor. */
     public AutoSequence motorStop() {
-        steps.add(AutoBuilder.motorStop());
+        steps.add(AutoBuilder.basicMotor.stopCommand());
         return this;
     }
 

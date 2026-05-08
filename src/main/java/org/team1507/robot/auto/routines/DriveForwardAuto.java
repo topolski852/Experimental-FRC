@@ -11,6 +11,7 @@ package org.team1507.robot.auto.routines;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj2.command.Command;
 
+import org.team1507.robot.Constants.kSwerve;
 import org.team1507.robot.auto.AutoSequence;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -40,7 +41,8 @@ public final class DriveForwardAuto {
     public static Command build() {
         return new AutoSequence()
             .resetPose(new Pose2d())
-            .driveFieldRelative(2.0, 0.0, 0.0, 1.5)
+            .changeHeading(90)
+            .driveForwardMeters(2.0, 5.0, true)
             .stop()
             .build();
     }
