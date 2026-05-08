@@ -24,10 +24,24 @@ import edu.wpi.first.units.measure.Voltage;
  *
  * <p>Owns and manages CTRE {@link StatusSignal} instances for a single motor.
  * This class is responsible only for observation and signal refresh.
+ *
+ * <p>Signal update rates are tiered by importance:
+ * <ul>
+ *   <li>Position and velocity at 100 Hz — needed for odometry and closed-loop control.</li>
+ *   <li>Current signals at 50 Hz — fast enough for stall detection without flooding the bus.</li>
+ *   <li>Voltage and temperature at 10 Hz — monitoring only, no need for high frequency.</li>
+ * </ul>
  */
 public final class CtreMotorSignals {
 
-    private static final double DEFAULT_UPDATE_HZ = 100.0;
+    /** Signals used for closed-loop control and odometry. */
+    private static final double ODOMETRY_HZ = 100.0;
+
+    /** Signals used for stall detection. */
+    private static final double STALL_HZ = 50.0;
+
+    /** Signals used only for driver station / dashboard monitoring. */
+    private static final double MONITOR_HZ = 10.0;
 
     private final StatusSignal<Angle> rotorPosition;
     private final StatusSignal<AngularVelocity> rotorVelocity;
@@ -51,15 +65,9 @@ public final class CtreMotorSignals {
         this.motorVoltage  = motorVoltage;
         this.deviceTemp    = deviceTemp;
 
-        BaseStatusSignal.setUpdateFrequencyForAll(
-            DEFAULT_UPDATE_HZ,
-            rotorPosition,
-            rotorVelocity,
-            supplyCurrent,
-            statorCurrent,
-            motorVoltage,
-            deviceTemp
-        );
+        BaseStatusSignal.setUpdateFrequencyForAll(ODOMETRY_HZ, rotorPosition, rotorVelocity);
+        BaseStatusSignal.setUpdateFrequencyForAll(STALL_HZ,    supplyCurrent, statorCurrent);
+        BaseStatusSignal.setUpdateFrequencyForAll(MONITOR_HZ,  motorVoltage,  deviceTemp);
     }
 
     // ============================================================

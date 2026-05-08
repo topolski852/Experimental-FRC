@@ -1,6 +1,12 @@
 plugins {
     id "java"
     id "edu.wpi.first.GradleRIO" version "2026.1.1"
+    // ── SystemCore note ────────────────────────────────────────────────────
+    // When WPILib 2027 is released (typically November), update GradleRIO to
+    // the 2027.x version and change the deploy target below from 'roborio' to
+    // 'systemcore'. The Java API stays the same; only the target name and JDK
+    // version may change. Track the WPILib blog for migration instructions.
+    // ───────────────────────────────────────────────────────────────────────
 }
 
 java {

@@ -30,6 +30,7 @@ import static edu.wpi.first.units.Units.Degrees;
 
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
+import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.Pigeon2;
 
 import org.team1507.lib.core.logging.Telemetry;
@@ -128,6 +129,17 @@ public final class Swerve extends SubsystemBase {
             visionStdDevs
         );
 
+        // After all signals are configured, disable unused CAN signals on every swerve device.
+        // This keeps the CAN bus from being flooded with data the robot never reads.
+        ParentDevice.optimizeBusUtilizationForAll(
+            4.0, // minimum acceptable update rate for disabled signals (Hz)
+            frontLeft.getDriveDevice(),  frontLeft.getSteerDevice(),  frontLeft.getEncoderDevice(),
+            frontRight.getDriveDevice(), frontRight.getSteerDevice(), frontRight.getEncoderDevice(),
+            backLeft.getDriveDevice(),   backLeft.getSteerDevice(),   backLeft.getEncoderDevice(),
+            backRight.getDriveDevice(),  backRight.getSteerDevice(),  backRight.getEncoderDevice(),
+            pigeon
+        );
+
         Telemetry.set("Swerve/Initialized", true);
     }
 
@@ -184,7 +196,7 @@ public final class Swerve extends SubsystemBase {
     // These are the raw driving methods called by commands.
     // Students generally don't call these directly — use a command.
     // ============================================================
- 
+
     /**
      * Drives using field-relative ChassisSpeeds (x = forward, y = left).
      * The kinematics layer converts these to individual module states.
@@ -192,13 +204,13 @@ public final class Swerve extends SubsystemBase {
     public void drive(ChassisSpeeds speeds) {
         SwerveModuleState[] states = kinematics.toSwerveModuleStates(speeds);
         SwerveDriveKinematics.desaturateWheelSpeeds(states, maxSpeedMetersPerSecond);
- 
+
         frontLeft.setDesiredState(states[0]);
         frontRight.setDesiredState(states[1]);
         backLeft.setDesiredState(states[2]);
         backRight.setDesiredState(states[3]);
     }
- 
+
     /**
      * Drives using robot-relative ChassisSpeeds.
      * Used by movement commands that already handle the field→robot conversion.
@@ -206,13 +218,13 @@ public final class Swerve extends SubsystemBase {
     public void driveRobotRelative(ChassisSpeeds speeds) {
         SwerveModuleState[] states = kinematics.toSwerveModuleStates(speeds);
         SwerveDriveKinematics.desaturateWheelSpeeds(states, maxSpeedMetersPerSecond);
- 
+
         frontLeft.setDesiredState(states[0]);
         frontRight.setDesiredState(states[1]);
         backLeft.setDesiredState(states[2]);
         backRight.setDesiredState(states[3]);
     }
- 
+
     /** Stops all modules immediately. */
     public void stop() {
         frontLeft.stop();
@@ -220,7 +232,7 @@ public final class Swerve extends SubsystemBase {
         backLeft.stop();
         backRight.stop();
     }
- 
+
     /**
      * Sets all modules to the X configuration (FL/BR at +45°, FR/BL at -45°).
      * Creates a cross pattern that strongly resists pushing.
@@ -260,7 +272,7 @@ public final class Swerve extends SubsystemBase {
             kinematics.toChassisSpeeds(getModuleStates()), getHeading()
         );
     }
- 
+
     // Temporary pose storage for driveForwardMeters.
     public void setTemporaryTargetPose(Pose2d p) {
         this.temporaryTargetPose = p;
@@ -334,7 +346,7 @@ public final class Swerve extends SubsystemBase {
     //
     // Private math utilities shared across multiple commands.
     // ============================================================
- 
+
     /**
      * Simple proportional heading controller.
      * Returns an angular velocity (rad/s) to steer from current → desired rotation.
@@ -346,7 +358,7 @@ public final class Swerve extends SubsystemBase {
         double error = MathUtil.angleModulus(desired.minus(current).getRadians());
         return error * HEADING_KP;
     }
- 
+
     /**
      * Computes the direction the robot must face to look directly at a target.
      * Returns a Rotation2d pointing from robot's current XY → target's XY.
@@ -387,12 +399,12 @@ public final class Swerve extends SubsystemBase {
     // ║    3. Autonomous Movement (driveToPoint, moveThroughPose, etc.)  ║
     // ║    4. Utility (lock, resetPose)                                  ║
     // ╚══════════════════════════════════════════════════════════════════╝
- 
- 
+
+
     // ─────────────────────────────────────────────────────────────────
     // 1. BASIC DRIVE
     // ─────────────────────────────────────────────────────────────────
- 
+
     /**
      * Default teleop drive command.
      * Accepts a ChassisSpeeds supplier so Robot.java can compute speeds
@@ -404,7 +416,7 @@ public final class Swerve extends SubsystemBase {
         return run(() -> drive(speeds.get()))
             .withName("Swerve.drive");
     }
- 
+
     /**
      * Drives at fixed ChassisSpeeds. Used by auto commands.
      */
@@ -412,7 +424,7 @@ public final class Swerve extends SubsystemBase {
         return run(() -> drive(speeds))
             .withName("Swerve.driveFixed");
     }
- 
+
     /**
      * Drives at the given ChassisSpeeds for a fixed number of seconds, then stops.
      * Called by AutoBuilder.driveForTime().
@@ -423,24 +435,24 @@ public final class Swerve extends SubsystemBase {
             .finallyDo(interrupted -> stop())
             .withName("Swerve.driveForTime");
     }
- 
+
     /** Stops all modules. Instantaneous (runOnce). */
     public Command stopCommand() {
         return runOnce(this::stop)
             .withName("Swerve.stop");
     }
- 
+
     /** Resets the robot's pose estimate to a given field position. */
     public Command resetPoseCommand(Pose2d pose) {
         return runOnce(() -> resetPose(pose))
             .withName("Swerve.resetPose");
     }
 
- 
+
     // ─────────────────────────────────────────────────────────────────
     // 2. HEADING CONTROL
     // ─────────────────────────────────────────────────────────────────
- 
+
     /**
      * Rotates the robot in place until it faces a fixed field position.
      *
@@ -468,7 +480,7 @@ public final class Swerve extends SubsystemBase {
         .finallyDo(interrupted -> stop())
         .withName("Swerve.pointToTarget");
     }
- 
+
     /**
      * Rotates the robot in place to continuously face a dynamic target.
      * The target pose is re-read from the supplier every loop.
@@ -494,7 +506,7 @@ public final class Swerve extends SubsystemBase {
         .finallyDo(interrupted -> stop())
         .withName("Swerve.pointToTargetDynamic");
     }
- 
+
     /**
      * Rotates the robot to match the heading stored in a target Pose2d,
      * ignoring that pose's XY position entirely.
@@ -520,7 +532,7 @@ public final class Swerve extends SubsystemBase {
         .finallyDo(interrupted -> stop())
         .withName("Swerve.changeHeading");
     }
- 
+
     /**
      * Drives with driver-supplied translation while automatically aiming at a target.
      *
@@ -545,7 +557,7 @@ public final class Swerve extends SubsystemBase {
             Pose2d currentPose  = getPose();
             Pose2d targetPose   = targetPoseSupplier.get();
             ChassisSpeeds field = getFieldRelativeSpeeds();
- 
+
             // Shift the aim point forward in time to compensate for robot motion.
             // If the robot moves right at 2 m/s and lead time is 0.25 s,
             // the compensated target shifts 0.5 m right — correcting for
@@ -556,23 +568,23 @@ public final class Swerve extends SubsystemBase {
                     field.vyMetersPerSecond * AIM_LEAD_TIME
                 )
             );
- 
+
             Rotation2d desiredHeading = compensated
                 .minus(currentPose.getTranslation())
                 .getAngle();
- 
+
             double omega = computeOmega(currentPose.getRotation(), desiredHeading);
             drive(new ChassisSpeeds(xSupplier.get(), ySupplier.get(), omega));
         })
         .finallyDo(interrupted -> stop())
         .withName("Swerve.maintainHeadingToTarget");
     }
- 
- 
+
+
     // ─────────────────────────────────────────────────────────────────
     // 3. AUTONOMOUS MOVEMENT
     // ─────────────────────────────────────────────────────────────────
- 
+
     /**
      * Drives toward a target pose at a fixed velocity and stops when within
      * ARRIVE_THRESHOLD (5 cm) of the target XY.
@@ -588,21 +600,21 @@ public final class Swerve extends SubsystemBase {
         return run(() -> {
             Pose2d current     = getPose();
             Rotation2d heading = current.getRotation();
- 
+
             // Unit vector toward target
             double dx       = targetPose.getX() - current.getX();
             double dy       = targetPose.getY() - current.getY();
             double distance = Math.hypot(dx, dy);
- 
+
             double ux = (distance > ARRIVE_THRESHOLD) ? dx / distance : 0.0;
             double uy = (distance > ARRIVE_THRESHOLD) ? dy / distance : 0.0;
- 
+
             // Heading correction
             double headingError = MathUtil.angleModulus(
                 targetPose.getRotation().minus(heading).getRadians()
             );
             double omega = headingError * 5.0;
- 
+
             driveRobotRelative(ChassisSpeeds.fromFieldRelativeSpeeds(
                 ux * velocity, uy * velocity, omega, heading
             ));
@@ -614,7 +626,7 @@ public final class Swerve extends SubsystemBase {
         .finallyDo(interrupted -> { if (stopAtEnd) stop(); })
         .withName("Swerve.driveToPoint");
     }
- 
+
     /**
      * Drives through a waypoint at constant speed without slowing down.
      *
@@ -643,10 +655,10 @@ public final class Swerve extends SubsystemBase {
     ) {
         PIDController thetaPID = new PIDController(THETA_KP, THETA_KI, THETA_KD);
         thetaPID.enableContinuousInput(-Math.PI, Math.PI);
- 
+
         // Stall tracker: [lastX, lastY, lastMoveTimestamp]
         final double[] stall = new double[3];
- 
+
         return runOnce(() -> {
             Pose2d p = getPose();
             stall[0] = p.getX();
@@ -656,14 +668,14 @@ public final class Swerve extends SubsystemBase {
         })
         .andThen(run(() -> {
             Pose2d current = getPose();
- 
+
             // Normalized direction vector toward waypoint
             double dx       = targetPose.getX() - current.getX();
             double dy       = targetPose.getY() - current.getY();
             double distance = Math.hypot(dx, dy);
             double dirX     = dx / (distance + 1e-9);
             double dirY     = dy / (distance + 1e-9);
- 
+
             // PID rotation toward target heading, clamped to maxAngular
             double omega = MathUtil.clamp(
                 thetaPID.calculate(
@@ -672,11 +684,11 @@ public final class Swerve extends SubsystemBase {
                 ),
                 -maxAngular, maxAngular
             );
- 
+
             driveRobotRelative(ChassisSpeeds.fromFieldRelativeSpeeds(
                 dirX * maxSpeed, dirY * maxSpeed, omega, current.getRotation()
             ));
- 
+
             // Update stall tracker if the robot is actually moving
             double moveDx = Math.abs(current.getX() - stall[0]);
             double moveDy = Math.abs(current.getY() - stall[1]);
@@ -688,11 +700,11 @@ public final class Swerve extends SubsystemBase {
         }))
         .until(() -> {
             Pose2d current = getPose();
- 
+
             // Done: robot entered pass radius
             if (current.getTranslation().getDistance(targetPose.getTranslation()) < passRadius)
                 return true;
- 
+
             // Done: stall timeout expired
             double dx = Math.abs(current.getX() - stall[0]);
             double dy = Math.abs(current.getY() - stall[1]);
@@ -703,7 +715,7 @@ public final class Swerve extends SubsystemBase {
         .finallyDo(interrupted -> stop())
         .withName("Swerve.moveThroughPose");
     }
- 
+
     /**
      * Convenience overload of moveThroughPose using the default pass radius.
      * Use this when you don't need to tune the radius per waypoint.
@@ -711,7 +723,7 @@ public final class Swerve extends SubsystemBase {
     public Command moveThroughPose(Pose2d targetPose, double maxSpeed, double maxAngular) {
         return moveThroughPose(targetPose, maxSpeed, maxAngular, MOVE_THROUGH_DEFAULT_RADIUS);
     }
- 
+
     /**
      * Drives forward a fixed distance along the robot's current heading.
      *
@@ -740,19 +752,19 @@ public final class Swerve extends SubsystemBase {
             Pose2d current = getPose();
             Pose2d target  = getTemporaryTargetPose();
             Rotation2d hdg = current.getRotation();
- 
+
             double dx       = target.getX() - current.getX();
             double dy       = target.getY() - current.getY();
             double distance = Math.hypot(dx, dy);
- 
+
             double ux = (distance > ARRIVE_THRESHOLD) ? dx / distance : 0.0;
             double uy = (distance > ARRIVE_THRESHOLD) ? dy / distance : 0.0;
- 
+
             double headingError = MathUtil.angleModulus(
                 target.getRotation().minus(hdg).getRadians()
             );
             double omega = headingError * 5.0;
- 
+
             driveRobotRelative(ChassisSpeeds.fromFieldRelativeSpeeds(
                 ux * velocity, uy * velocity, omega, hdg
             ));
@@ -764,12 +776,12 @@ public final class Swerve extends SubsystemBase {
         .finallyDo(interrupted -> { if (stopAtEnd) stop(); })
         .withName("Swerve.driveForwardMeters");
     }
- 
- 
+
+
     // ─────────────────────────────────────────────────────────────────
     // 4. UTILITY
     // ─────────────────────────────────────────────────────────────────
- 
+
     /**
      * Locks all modules in the X configuration to resist pushing.
      *

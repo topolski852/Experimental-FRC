@@ -55,7 +55,7 @@ public final class Motor1507 {
     /** Timestamp of the last moment the motor was not stalled. */
     private double lastNotStalledTime = 0;
 
-    /**  */
+    /** True when the motor was considered stalled on the previous loop iteration. */
     private boolean lastStalled = false;
 
     // ------------------------------------------------------------
@@ -72,7 +72,7 @@ public final class Motor1507 {
     // ------------------------------------------------------------
     // Simulated Data
     // ------------------------------------------------------------
-    
+
     private double simRotorPosition = 0.0;
     private double simRotorVelocity = 0.0;
 
@@ -235,6 +235,16 @@ public final class Motor1507 {
 
     public void refresh() {
         signals.refresh();
+    }
+
+    /**
+     * Returns the underlying Phoenix 6 hardware device.
+     *
+     * <p>Used for CAN bus optimization (e.g., {@code ParentDevice.optimizeBusUtilizationForAll}).
+     * Avoid using the raw device for control — use the methods on this class instead.
+     */
+    public com.ctre.phoenix6.hardware.ParentDevice getDevice() {
+        return (com.ctre.phoenix6.hardware.ParentDevice) motor;
     }
 
     /**

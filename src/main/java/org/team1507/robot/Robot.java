@@ -28,6 +28,7 @@ import org.team1507.lib.core.swerve.SwerveModule1507.MathConfig;
 import org.team1507.robot.subsystems.*;
 import org.team1507.robot.auto.AutoBuilder;
 import org.team1507.robot.auto.routines.DriveForwardAuto;
+import org.team1507.robot.Constants.RobotMap;
 import org.team1507.robot.Constants.kSwerve;
 
 public final class Robot extends LoggedRobot {
@@ -63,32 +64,32 @@ public final class Robot extends LoggedRobot {
         MathConfig math = new MathConfig(kSwerve.DRIVE_GEAR_RATIO, kSwerve.STEER_GEAR_RATIO, kSwerve.COUPLE_RATIO, kSwerve.WHEEL_RADIUS_METERS);
 
         swerve = new Swerve(
-            new SwerveModule1507("FrontLeft", 
-                new Motor1507("FL_Drive", Motor1507.Type.FX, 7,  kSwerve.FRONT_LEFT_DRIVE_CONFIG),
-                new Motor1507("FL_Steer", Motor1507.Type.FX, 8,  kSwerve.FRONT_LEFT_STEER_CONFIG), 
-                new CANcoder(9),  new Rotation2d(Rotations.of(0.129150390625)), math, kSwerve.DRIVE_METERS_SCALE),
+            new SwerveModule1507("FrontLeft",
+                new Motor1507("FL_Drive", Motor1507.Type.FX, RobotMap.FL_DRIVE, kSwerve.FRONT_LEFT_DRIVE_CONFIG),
+                new Motor1507("FL_Steer", Motor1507.Type.FX, RobotMap.FL_STEER, kSwerve.FRONT_LEFT_STEER_CONFIG),
+                new CANcoder(RobotMap.FL_ENCODER), new Rotation2d(Rotations.of(RobotMap.FL_ENCODER_OFFSET)), math, kSwerve.DRIVE_METERS_SCALE),
 
-            new SwerveModule1507("FrontRight", 
-                new Motor1507("FR_Drive", Motor1507.Type.FX, 1,  kSwerve.FRONT_RIGHT_DRIVE_CONFIG),
-                new Motor1507("FR_Steer", Motor1507.Type.FX, 2,  kSwerve.FRONT_RIGHT_STEER_CONFIG), 
-                new CANcoder(3),  new Rotation2d(Rotations.of(-0.28515625)), math, kSwerve.DRIVE_METERS_SCALE),
+            new SwerveModule1507("FrontRight",
+                new Motor1507("FR_Drive", Motor1507.Type.FX, RobotMap.FR_DRIVE, kSwerve.FRONT_RIGHT_DRIVE_CONFIG),
+                new Motor1507("FR_Steer", Motor1507.Type.FX, RobotMap.FR_STEER, kSwerve.FRONT_RIGHT_STEER_CONFIG),
+                new CANcoder(RobotMap.FR_ENCODER), new Rotation2d(Rotations.of(RobotMap.FR_ENCODER_OFFSET)), math, kSwerve.DRIVE_METERS_SCALE),
 
-            new SwerveModule1507("BackLeft", 
-                new Motor1507("BL_Drive", Motor1507.Type.FX, 4,  kSwerve.BACK_LEFT_DRIVE_CONFIG),
-                new Motor1507("BL_Steer", Motor1507.Type.FX, 5,  kSwerve.BACK_LEFT_STEER_CONFIG), 
-                new CANcoder(6),  new Rotation2d(Rotations.of(-0.436767578125)), math, kSwerve.DRIVE_METERS_SCALE),
+            new SwerveModule1507("BackLeft",
+                new Motor1507("BL_Drive", Motor1507.Type.FX, RobotMap.BL_DRIVE, kSwerve.BACK_LEFT_DRIVE_CONFIG),
+                new Motor1507("BL_Steer", Motor1507.Type.FX, RobotMap.BL_STEER, kSwerve.BACK_LEFT_STEER_CONFIG),
+                new CANcoder(RobotMap.BL_ENCODER), new Rotation2d(Rotations.of(RobotMap.BL_ENCODER_OFFSET)), math, kSwerve.DRIVE_METERS_SCALE),
 
-            new SwerveModule1507("BackRight", 
-                new Motor1507("BR_Drive", Motor1507.Type.FX, 10, kSwerve.BACK_RIGHT_DRIVE_CONFIG),
-                new Motor1507("BR_Steer", Motor1507.Type.FX, 11, kSwerve.BACK_RIGHT_STEER_CONFIG), 
-                new CANcoder(12), new Rotation2d(Rotations.of(0.138671875)), math, kSwerve.DRIVE_METERS_SCALE),
+            new SwerveModule1507("BackRight",
+                new Motor1507("BR_Drive", Motor1507.Type.FX, RobotMap.BR_DRIVE, kSwerve.BACK_RIGHT_DRIVE_CONFIG),
+                new Motor1507("BR_Steer", Motor1507.Type.FX, RobotMap.BR_STEER, kSwerve.BACK_RIGHT_STEER_CONFIG),
+                new CANcoder(RobotMap.BR_ENCODER), new Rotation2d(Rotations.of(RobotMap.BR_ENCODER_OFFSET)), math, kSwerve.DRIVE_METERS_SCALE),
             kSwerve.FRONT_LEFT_LOCATION,
             kSwerve.FRONT_RIGHT_LOCATION,
             kSwerve.BACK_LEFT_LOCATION,
             kSwerve.BACK_RIGHT_LOCATION,
-            new Pigeon2(30),
-            kSwerve.SPEED_AT_12_VOLTS.magnitude(), // Max Speed (meters per second)
-            kSwerve.SPEED_AT_12_VOLTS.magnitude(), // Max Angular Speed (radians)
+            new Pigeon2(RobotMap.PIGEON2),
+            kSwerve.SPEED_AT_12_VOLTS.magnitude(),
+            kSwerve.SPEED_AT_12_VOLTS.magnitude(),
             kSwerve.ODOMETRY_STD_DEV,
             kSwerve.VISION_STD_DEV);
 
@@ -100,11 +101,11 @@ public final class Robot extends LoggedRobot {
             "Drive Forward",
             DriveForwardAuto.build()
         );
-        
+
         SmartDashboard.putData("Auto Mode", autoChooser);
 
         // Initialize controllers
-        driver = new CommandXboxController(0);
+        driver = new CommandXboxController(RobotMap.DRIVER_CONTROLLER);
 
         // Bind controls
         configureBindings();

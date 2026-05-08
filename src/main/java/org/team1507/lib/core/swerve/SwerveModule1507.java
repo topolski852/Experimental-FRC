@@ -207,6 +207,19 @@ public final class SwerveModule1507 {
     }
 
     // ============================================================
+    // CAN Bus Access (for bus optimization only)
+    // ============================================================
+
+    /** Returns the drive motor's Phoenix 6 device handle. Used to optimize CAN bus utilization. */
+    public com.ctre.phoenix6.hardware.ParentDevice getDriveDevice() { return drive.getDevice(); }
+
+    /** Returns the steer motor's Phoenix 6 device handle. Used to optimize CAN bus utilization. */
+    public com.ctre.phoenix6.hardware.ParentDevice getSteerDevice() { return steer.getDevice(); }
+
+    /** Returns the CANcoder's Phoenix 6 device handle. Used to optimize CAN bus utilization. */
+    public com.ctre.phoenix6.hardware.ParentDevice getEncoderDevice() { return encoder; }
+
+    // ============================================================
     // Faults
     // ============================================================
 

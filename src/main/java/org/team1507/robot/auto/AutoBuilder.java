@@ -34,9 +34,9 @@ public final class AutoBuilder {
     // Subsystem Registry
     // -------------------------------------------------------------------------
 
-    static Swerve swerve;
-    static ArmSystem arm;
-    static BasicMotor basicMotor;
+    public static Swerve swerve;
+    public static ArmSystem arm;
+    public static BasicMotor basicMotor;
 
     // ADD NEW SUBSYSTEMS HERE each year:
     // private static Shooter shooter;
