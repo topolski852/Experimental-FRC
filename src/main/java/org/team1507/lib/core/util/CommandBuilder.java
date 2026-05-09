@@ -9,11 +9,10 @@
 package org.team1507.lib.core.util;
 
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 
-import java.util.ConcurrentModificationException;
-import java.util.function.BiConsumer;
 import java.util.function.BooleanSupplier;
 
 import org.team1507.lib.core.logging.Telemetry;
@@ -78,13 +77,18 @@ public class CommandBuilder extends Command {
     // Timeout tracking
     // -----------------------------
     private double timeoutSeconds = -1.0;
-    private double startTime = 0.0;
+    private double startTime = -1.0;
     private boolean timedOut = false;
 
     // -----------------------------
     // Stall tracking
     // -----------------------------
     private boolean stalled = false;
+
+    // -----------------------------
+    // Disabled-mode flag
+    // -----------------------------
+    private boolean disabledOk = false;
 
     /**
      * Creates a new CommandBuilder and declares subsystem requirements.
@@ -153,16 +157,6 @@ public class CommandBuilder extends Command {
     }
 
     /**
-     * Convenience overload for handlers that use interruption and timeout causes.
-     *
-     * @param r handler receiving (interrupted, timedOut)
-     * @return this builder
-     */
-    public CommandBuilder onEnd(BiConsumer<Boolean, Boolean> r) {
-        return onEnd((i, t, s) -> r.accept(i, t));
-    }
-
-    /**
      * Sets the normal finish condition for the command.
      *
      * @param condition supplier returning true when the command should end
@@ -198,19 +192,6 @@ public class CommandBuilder extends Command {
     }
 
     /**
-     * Runs the command until the timeout expires, ignoring normal finish conditions.
-     *
-     * @param seconds timeout duration
-     * @return this builder
-     */
-    public CommandBuilder timeoutOnly(double seconds) {
-        ensureNotRunning();
-        this.timeoutSeconds = seconds;
-        this.finishCondition = () -> false;
-        return this;
-    }
-
-    /**
      * Sets a stall finish condition. When the supplier returns true, the command
      * ends and {@code stalled} is set to true.
      *
@@ -220,6 +201,57 @@ public class CommandBuilder extends Command {
     public CommandBuilder stallFinish(BooleanSupplier stallCondition) {
         ensureNotRunning();
         this.stallCondition = stallCondition;
+        return this;
+    }
+
+    /**
+     * Allows this command to run while the robot is disabled.
+     *
+     * <p>Use this for commands that should be triggerable from the dashboard before
+     * a match — for example, pose presets that need to run before autonomous starts.
+     * Motor output commands should never set this to true.
+     *
+     * @param value true to allow running when disabled
+     * @return this builder
+     */
+    public CommandBuilder runsWhenDisabled(boolean value) {
+        this.disabledOk = value;
+        return this;
+    }
+
+    /**
+     * Equivalent to {@code isFinished(false)} — the command runs until interrupted
+     * by the scheduler or ended by a {@code stallFinish} or {@code timeout} condition.
+     *
+     * <p>Prefer this over {@code .isFinished(false)} at the call site — the intent
+     * is immediately clear without having to think about what {@code false} means.
+     *
+     * @return this builder
+     */
+    public CommandBuilder runsUntilInterrupted() {
+        return isFinished(false);
+    }
+
+    /**
+     * Registers this command on SmartDashboard so it can be triggered from the
+     * driver station dashboard (Elastic, Shuffleboard, etc.).
+     *
+     * <p>Call this after {@link #named(String)} so the widget label matches the
+     * command name. Combine with {@link #runsWhenDisabled(boolean) runsWhenDisabled(true)}
+     * for pre-match commands that run while the robot is disabled:
+     * <pre>
+     *   new CommandBuilder(this)
+     *       .named("Set Pose Left")
+     *       .onInitialize(...)
+     *       .isFinished(true)
+     *       .runsWhenDisabled(true)
+     *       .publishToDashboard();
+     * </pre>
+     *
+     * @return this builder
+     */
+    public CommandBuilder publishToDashboard() {
+        SmartDashboard.putData(getName(), this);
         return this;
     }
 
@@ -286,12 +318,17 @@ public class CommandBuilder extends Command {
         return finishCondition.getAsBoolean();
     }
 
+    @Override
+    public boolean runsWhenDisabled() {
+        return disabledOk;
+    }
+
     // -----------------------------
     // Internal safety
     // -----------------------------
     private void ensureNotRunning() {
         if (isScheduled()) {
-            throw new ConcurrentModificationException(
+            throw new IllegalStateException(
                 "Cannot modify a running CommandBuilder"
             );
         }

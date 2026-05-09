@@ -227,7 +227,7 @@ public final class ArmSystem extends Subsystem1507 {
             .onInitialize(this::deploy)
             .stallFinish(this::isStalled)
             .onEnd((interrupted, timedOut, stalled) -> stop())
-            .isFinished(false);
+            .runsUntilInterrupted();
     }
 
     /**
@@ -239,7 +239,7 @@ public final class ArmSystem extends Subsystem1507 {
             .onInitialize(this::retract)
             .stallFinish(this::isStalled)
             .onEnd((interrupted, timedOut, stalled) -> stop())
-            .isFinished(false);
+            .runsUntilInterrupted();
     }
 
     /**
@@ -247,7 +247,7 @@ public final class ArmSystem extends Subsystem1507 {
      */
     public Command goToCommand(Position position) {
         return new CommandBuilder(this)
-            .named("Arm.manualJoystick")
+            .named("Arm.goTo")
             .onExecute(() -> {
                 if(position == Position.LOW) setAngle(RETRACTED_ANGLE_DEGREES);
                 if(position == Position.MID) setAngle(DEPLOYED_ANGLE_DEGREES);
@@ -255,7 +255,8 @@ public final class ArmSystem extends Subsystem1507 {
                 if(position == Position.STOW) setAngle(RETRACTED_ANGLE_DEGREES);
             })
             .stallFinish(this::isStalled)
-            .onEnd((interrupted, timedOut, stalled) -> stop());
+            .onEnd((interrupted, timedOut, stalled) -> stop())
+            .runsUntilInterrupted();
     }
 
     /**
@@ -266,7 +267,8 @@ public final class ArmSystem extends Subsystem1507 {
             .named("Arm.manualUp")
             .onExecute(() -> runManual(MANUAL_POSITIVE_POWER))
             .stallFinish(this::isStalled)
-            .onEnd((interrupted, timedOut, stalled) -> stop());
+            .onEnd((interrupted, timedOut, stalled) -> stop())
+            .runsUntilInterrupted();
     }
 
     /**
@@ -277,7 +279,8 @@ public final class ArmSystem extends Subsystem1507 {
             .named("Arm.manualDown")
             .onExecute(() -> runManual(MANUAL_NEGATIVE_POWER))
             .stallFinish(this::isStalled)
-            .onEnd((interrupted, timedOut, stalled) -> stop());
+            .onEnd((interrupted, timedOut, stalled) -> stop())
+            .runsUntilInterrupted();
     }
 
     /**
@@ -288,6 +291,7 @@ public final class ArmSystem extends Subsystem1507 {
             .named("Arm.manualJoystick")
             .onExecute(() -> runManual(inputSupplier.getAsDouble()))
             .stallFinish(this::isStalled)
-            .onEnd((interrupted, timedOut, stalled) -> stop());
+            .onEnd((interrupted, timedOut, stalled) -> stop())
+            .runsUntilInterrupted();
     }
 }

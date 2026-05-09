@@ -17,79 +17,89 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 
 import org.team1507.lib.core.framework.LoggedRobot;
-import org.team1507.robot.subsystems.*;
+import org.team1507.lib.core.vision.QuestNavSubsystem;
 import org.team1507.robot.auto.AutoBuilder;
-import org.team1507.robot.auto.routines.DriveForwardAuto;
-import org.team1507.robot.auto.routines.ScorePickupScoreAuto;
+import org.team1507.robot.auto.nodes.Nodes;
+import org.team1507.robot.auto.routines.*;
 import org.team1507.robot.Constants.RobotMap;
+import org.team1507.robot.Constants.kQuest;
 import org.team1507.robot.Constants.kSwerve;
+import org.team1507.robot.subsystems.*;
 
 public final class Robot extends LoggedRobot {
 
-    // ------------------------------------------------------------
+    // -------------------------------------------------------------------------
     // Subsystems
-    // ------------------------------------------------------------
+    // -------------------------------------------------------------------------
 
-    public final ArmSystem arm;
-    public final BasicMotor basicMotor;
-    public final Swerve swerve;
+    public final Swerve             swerve;
+    public final QuestNavSubsystem  questNav;
+    public final ArmSystem          arm;
+    public final BasicMotor         basicMotor;
 
-    // ------------------------------------------------------------
+    // -------------------------------------------------------------------------
     // Controllers
-    // ------------------------------------------------------------
+    // -------------------------------------------------------------------------
 
     private final CommandXboxController driver;
 
-    // ------------------------------------------------------------
-    // Auto
-    // ------------------------------------------------------------
+    // -------------------------------------------------------------------------
+    // Autonomous
+    // -------------------------------------------------------------------------
 
     private Command m_autoCommand = null;
-    private final SendableChooser<Command> autoChooser =
-        new SendableChooser<>();
+    private final SendableChooser<Command> autoChooser = new SendableChooser<>();
+
+    // =========================================================================
+    // Constructor
+    // =========================================================================
 
     public Robot() {
 
-        // Initialize subsystems
-        arm         = new ArmSystem();
-        basicMotor  = new BasicMotor();
-        swerve      = new Swerve();
+        // Subsystems — swerve first; questNav takes method references from it.
+        swerve     = new Swerve();
+        questNav   = new QuestNavSubsystem(
+            swerve::addVisionMeasurement,
+            swerve::resetPose,
+            kQuest.ROBOT_TO_QUEST
+        );
+        arm        = new ArmSystem();
+        basicMotor = new BasicMotor();
 
-        // Initialize Autos
+        // Pre-match pose preset buttons (visible in Elastic while disabled).
+        // Place the robot at the known starting position and press the matching
+        // button. The command waits for Quest to confirm before snapping odometry.
+        questNav.setKnownPoseCommand(Nodes.Robot.Start.LEFT)
+            .named("Set Pose Left")
+            .publishToDashboard();
+        questNav.setKnownPoseCommand(Nodes.Robot.Start.CENTER)
+            .named("Set Pose Start")
+            .publishToDashboard();
+        questNav.setKnownPoseCommand(Nodes.Robot.Start.RIGHT)
+            .named("Set Pose Right")
+            .publishToDashboard();
 
+        // Autonomous chooser
         AutoBuilder.init(swerve, arm, basicMotor);
-
-        autoChooser.setDefaultOption(
-            "Drive Forward",
-            DriveForwardAuto.build()
-        );
-
-        autoChooser.addOption(
-            "Score Pickup Score",
-            ScorePickupScoreAuto.build()
-        );
-
+        autoChooser.setDefaultOption("Drive Forward", DriveForwardAuto.build());
+        autoChooser.addOption("Score Pickup Score", ScorePickupScoreAuto.build());
         SmartDashboard.putData("Auto Mode", autoChooser);
 
-        // Initialize controllers
+        // Controllers and bindings
         driver = new CommandXboxController(RobotMap.DRIVER_CONTROLLER);
-
-        // Bind controls
         configureBindings();
         configureDefaultBindings();
     }
 
-    // ------------------------------------------------------------
+    // =========================================================================
     // Bindings
-    // ------------------------------------------------------------
+    // =========================================================================
 
     private void configureBindings() {
 
-        // Basic motor examples
         driver.a().whileTrue(basicMotor.runForwardCommand());
         driver.b().whileTrue(basicMotor.runReverseCommand());
 
-        // Arm position examples
         driver.x().onTrue(arm.deployCommand());
         driver.y().onTrue(arm.retractCommand());
 
@@ -97,28 +107,31 @@ public final class Robot extends LoggedRobot {
         driver.back().onTrue(swerve.stopCommand());
 
         // Point the robot toward the opposing alliance wall, then press left bumper
-        // to zero the gyro. Required after any hot code deploy without a power cycle.
+        // to zero the gyro. Do this after any hot code deploy without a power cycle.
         driver.leftBumper().onTrue(swerve.zeroHeadingCommand());
     }
 
     private void configureDefaultBindings() {
 
-        // Swerve default command
         swerve.setDefaultCommand(
             swerve.driveCommand(() -> {
-                double x = MathUtil.applyDeadband(-driver.getLeftY(), 0.12);
-                double y = MathUtil.applyDeadband(-driver.getLeftX(), 0.12);
+                double x   = MathUtil.applyDeadband(-driver.getLeftY(),  0.12);
+                double y   = MathUtil.applyDeadband(-driver.getLeftX(),  0.12);
                 double rot = MathUtil.applyDeadband(-driver.getRightX(), 0.12);
 
                 return ChassisSpeeds.fromFieldRelativeSpeeds(
-                    x * kSwerve.MAX_SPEED,
-                    y * kSwerve.MAX_SPEED,
+                    x   * kSwerve.MAX_SPEED,
+                    y   * kSwerve.MAX_SPEED,
                     rot * Math.PI,
                     swerve.getHeading()
                 );
             })
         );
     }
+
+    // =========================================================================
+    // Mode callbacks
+    // =========================================================================
 
     @Override
     public void autonomousInit() {
