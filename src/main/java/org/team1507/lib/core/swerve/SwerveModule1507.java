@@ -102,6 +102,12 @@ public final class SwerveModule1507 {
     // Control
     // ============================================================
 
+    /**
+     * Applies a desired swerve module state (speed and angle), optimizing direction
+     * to minimize wheel rotation and applying an anti-jitter guard at near-zero speed.
+     *
+     * @param desired the target module state
+     */
     public void setDesiredState(SwerveModuleState desired) {
         Rotation2d current = getAngle();
         SwerveModuleState optimized = new SwerveModuleState(
@@ -140,6 +146,7 @@ public final class SwerveModule1507 {
         Telemetry.set(key("Steer/TargetAngleRad"), targetAngle.getRadians());
     }
 
+    /** Stops both the drive and steer motors immediately. */
     public void stop() {
         drive.stop();
         steer.stop();
@@ -196,6 +203,7 @@ public final class SwerveModule1507 {
     // Observation
     // ============================================================
 
+    /** Returns the current steer angle, corrected for the encoder offset. */
     public Rotation2d getAngle() {
         if (RobotBase.isSimulation()) {
             return Rotation2d.fromRotations(simSteerAngleRotations);
@@ -216,6 +224,7 @@ public final class SwerveModule1507 {
             : azimuthVelocity.getValue().in(RotationsPerSecond);
     }
 
+    /** Returns the current module state (speed in m/s and steer angle). */
     public SwerveModuleState getState() {
         double mps = RobotBase.isSimulation()
             ? simDriveVelocityRps * math.wheelCircumferenceMeters()
@@ -224,6 +233,7 @@ public final class SwerveModule1507 {
         return new SwerveModuleState(mps, getAngle());
     }
 
+    /** Returns the current module position (distance traveled in meters and steer angle). */
     public SwerveModulePosition getPosition() {
         double meters = RobotBase.isSimulation()
             ? simDrivePositionRotations * math.wheelCircumferenceMeters()
@@ -232,6 +242,7 @@ public final class SwerveModule1507 {
         return new SwerveModulePosition(meters, getAngle());
     }
 
+    /** Returns all CAN status signals for this module (drive, steer, and encoder), for batched refresh. */
     public BaseStatusSignal[] getAllSignals() {
         return allSignals;
     }
@@ -259,10 +270,12 @@ public final class SwerveModule1507 {
     // Faults
     // ============================================================
 
+    /** Returns true if the drive motor is currently reporting a stall condition. */
     public boolean isDriveStalled() {
         return drive.isStalled();
     }
 
+    /** Returns true if the steer motor is currently reporting a stall condition. */
     public boolean isSteerStalled() {
         return steer.isStalled();
     }

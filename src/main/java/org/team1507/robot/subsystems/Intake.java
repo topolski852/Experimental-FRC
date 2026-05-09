@@ -28,8 +28,8 @@ import static org.team1507.robot.Constants.kIntake.*;
 // conveyor belts, ejectors, agitators, etc.
 //
 // ── Wiring in Robot.java ─────────────────────────────────────────────────────
-//   driver.rightBumper() → intake.runCommand()
-//   driver.rightTrigger()→ intake.reverseCommand()
+//   operator.rightBumper() → intake.runCommand()
+//   operator.rightTrigger()→ intake.reverseCommand()
 // ─────────────────────────────────────────────────────────────────────────────
 public final class Intake extends Subsystem1507 {
 

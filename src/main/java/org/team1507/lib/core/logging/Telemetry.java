@@ -161,6 +161,13 @@ public final class Telemetry {
         pub.set(pose);
     }
 
+    /**
+     * Publishes an array of {@link SwerveModuleState} structs so tools like
+     * AdvantageScope can visualize module states directly.
+     *
+     * @param key    NetworkTables key (e.g. "Swerve/ModuleStates")
+     * @param states module states to publish
+     */
     public static void set(String key, SwerveModuleState[] states) {
         StructArrayPublisher<SwerveModuleState> pub = moduleStatePublishers.get(key);
 

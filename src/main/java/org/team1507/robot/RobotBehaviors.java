@@ -32,7 +32,7 @@ import static org.team1507.robot.Constants.kShooter.*;
 // HOW TELEOP USES THIS:
 //   In Robot.java:
 //     operator.rightTrigger().whileTrue(RobotBehaviors.shoot());
-//     driver.a().onTrue(RobotBehaviors.scoreHigh());
+//     driver.a().onTrue(RobotBehaviors.stow());
 //
 // HOW AUTO USES THIS:
 //   In AutoSequence.java (add a one-line wrapper):

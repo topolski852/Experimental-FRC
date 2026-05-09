@@ -163,20 +163,24 @@ public final class Motor1507 {
         }
     }
 
+    /** Runs the motor at an open-loop duty cycle ({@code -1.0} to {@code +1.0}). */
     public void runDuty(double dutyCycle) {
         simRotorVelocity = dutyCycle * simVelocityRps;
         setControl(new DutyCycleOut(dutyCycle));
     }
 
+    /** Commands the motor to a target position using duty-cycle closed-loop. */
     public void setPositionDuty(double rotations) {
         setControl(new PositionDutyCycle(rotations));
     }
 
+    /** Commands the motor to a target position using voltage closed-loop. */
     public void setPositionVoltage(double rotations) {
         simTargetRotations = rotations;
         setControl(new PositionVoltage(rotations));
     }
 
+    /** Commands the motor to a target position using voltage closed-loop with an additional feedforward. */
     public void setPositionVoltage(double rotations, double ffVolts) {
         simTargetRotations = rotations;
         setControl(
@@ -185,11 +189,13 @@ public final class Motor1507 {
         );
     }
 
+    /** Commands the motor to a target velocity in rotations per second using voltage closed-loop. */
     public void setVelocityRPS(double motorRPS) {
         simRotorVelocity = motorRPS; // store for sim
         setControl(new VelocityVoltage(motorRPS));
     }
 
+    /** Commands the motor to a target velocity in rotations per second with an additional feedforward. */
     public void setVelocityRPS(double motorRPS, double ffVolts) {
         setControl(
             new VelocityVoltage(motorRPS)
@@ -197,6 +203,7 @@ public final class Motor1507 {
         );
     }
 
+    /** Stops the motor and clears any active control request. */
     public void stop() {
         simRotorVelocity = 0.0;
         simTargetRotations = Double.NaN;
@@ -238,22 +245,27 @@ public final class Motor1507 {
         return signals.getRotorVelocity();
     }
 
+    /** Returns the motor's supply current in amps. */
     public double getSupplyCurrent() {
         return signals.getSupplyCurrent();
     }
 
+    /** Returns the motor's stator current in amps. */
     public double getStatorCurrent() {
         return signals.getStatorCurrent();
     }
 
+    /** Returns the motor output voltage in volts. */
     public double getMotorVoltage() {
         return signals.getMotorVoltage();
     }
 
+    /** Returns the motor controller's device temperature in degrees Celsius. */
     public double getDeviceTemp() {
         return signals.getDeviceTemp();
     }
 
+    /** Refreshes all CAN status signals for this motor in one bus call. */
     public void refresh() {
         signals.refresh();
     }
@@ -268,6 +280,7 @@ public final class Motor1507 {
         return (com.ctre.phoenix6.hardware.ParentDevice) motor;
     }
 
+    /** Returns all tracked status signals for this motor, for use in batched refresh calls. */
     public com.ctre.phoenix6.BaseStatusSignal[] getSignals() {
         return signals.getSignals();
     }

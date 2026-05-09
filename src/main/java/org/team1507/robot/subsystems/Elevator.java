@@ -47,10 +47,10 @@ import static org.team1507.robot.Constants.kElevator.*;
 //       directly to Elastic dashboard indicators for match-day diagnostics
 //
 // ── Wiring in Robot.java ─────────────────────────────────────────────────────
-//   driver.povUp()      → elevator.goToCommand(Setpoint.HIGH)
-//   driver.povDown()    → elevator.goToCommand(Setpoint.STOW)
-//   driver.leftBumper() → elevator.manualUpCommand()
-//   driver.leftTrigger()→ elevator.manualDownCommand()
+//   operator.povUp()      → elevator.goToCommand(Setpoint.HIGH)
+//   operator.povDown()    → elevator.goToCommand(Setpoint.STOW)
+//   operator.leftBumper() → elevator.manualUpCommand()
+//   operator.leftTrigger()→ elevator.manualDownCommand()
 // ─────────────────────────────────────────────────────────────────────────────
 public final class Elevator extends Subsystem1507 {
 

@@ -19,6 +19,8 @@ import org.team1507.lib.core.framework.Subsystem1507;
 import org.team1507.lib.core.impl.ctre.Motor1507;
 import org.team1507.lib.core.util.CommandBuilder;
 
+import org.team1507.robot.Constants.RobotMap;
+
 import static org.team1507.robot.Constants.kArmMotor.*;
 
 /**
@@ -46,7 +48,7 @@ public final class ArmSystem extends Subsystem1507 {
     /** Last commanded arm angle in degrees. */
     private double targetAngleDeg = RETRACTED_ANGLE_DEGREES;
 
-    /** */
+    /** Named arm positions used by {@link #goToCommand}. */
     public static enum Position { STOW, LOW, MID, HIGH }
 
     /**
@@ -62,14 +64,14 @@ public final class ArmSystem extends Subsystem1507 {
         motorA = new Motor1507(
             key("MotorA"),
             Motor1507.Type.FX,
-            21,
+            RobotMap.ARM_A,
             CONFIG_A
         );
 
         motorB = new Motor1507(
             key("MotorB"),
             Motor1507.Type.FX,
-            22,
+            RobotMap.ARM_B,
             CONFIG_B
         );
 

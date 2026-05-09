@@ -34,10 +34,8 @@ public final class DriveForwardAuto {
      *
      * Steps:
      *   1. Reset pose to field origin (0, 0, 0°).
-     *   2. Face forward (0°), drive 2 m at full speed — tests APF deceleration.
-     *   3. Turn left to 90°, drive 1 m at 3 m/s — tests decel at lower cruise speed.
-     *   4. Turn to face back (180°), drive 2 m — returns toward start.
-     *   5. Stop.
+     *   2. Drive 5 m forward at full speed — tests APF deceleration.
+     *   3. Stop.
      */
     public static Command build() {
         return new AutoSequence()

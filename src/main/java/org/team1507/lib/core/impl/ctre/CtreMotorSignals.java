@@ -82,6 +82,14 @@ public final class CtreMotorSignals {
     // FACTORY
     // ============================================================
 
+    /**
+     * Creates a {@code CtreMotorSignals} from a {@link TalonFX} or {@link TalonFXS} instance,
+     * configuring update rates and collecting all signals into a single refreshable array.
+     *
+     * @param motor a {@link TalonFX} or {@link TalonFXS} hardware object
+     * @return configured signals wrapper for the given motor
+     * @throws IllegalArgumentException if the motor type is not supported
+     */
     public static CtreMotorSignals fromMotor(Object motor) {
         if (motor instanceof TalonFX fx) {
             return new CtreMotorSignals(
@@ -112,10 +120,12 @@ public final class CtreMotorSignals {
     // REFRESH
     // ============================================================
 
+    /** Returns the array of all tracked signals, for use with {@link BaseStatusSignal#refreshAll}. */
     public BaseStatusSignal[] getSignals() {
         return allSignals;
     }
 
+    /** Refreshes all tracked signals in one CAN bus call. */
     public void refresh() {
         BaseStatusSignal.refreshAll(allSignals);
     }

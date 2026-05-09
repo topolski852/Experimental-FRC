@@ -285,10 +285,12 @@ public final class Swerve extends Subsystem1507 {
     // Observation
     // ============================================================
 
+    /** Returns the robot's current estimated field pose. */
     public Pose2d getPose() {
         return pose;
     }
 
+    /** Returns the robot's current heading from the Pigeon2 (or simulated equivalent). */
     public Rotation2d getHeading() {
         if (RobotBase.isSimulation()) {
             return Rotation2d.fromRadians(simHeadingRadians);
@@ -296,6 +298,7 @@ public final class Swerve extends Subsystem1507 {
         return Rotation2d.fromDegrees(yaw.getValue().in(Degrees));
     }
 
+    /** Returns the robot's current robot-relative chassis speeds derived from module states. */
     public ChassisSpeeds getChassisSpeeds() {
         return kinematics.toChassisSpeeds(getModuleStates());
     }
@@ -310,19 +313,25 @@ public final class Swerve extends Subsystem1507 {
         );
     }
 
-    // Temporary pose storage for driveForwardMeters.
+    /**
+     * Stores a one-shot target pose for {@link #driveForwardMeters}.
+     * The pose is computed at command initialization and read back each execute() loop.
+     */
     public void setTemporaryTargetPose(Pose2d p) {
         this.temporaryTargetPose = p;
     }
 
+    /** Returns the target pose stored by the most recent {@link #driveForwardMeters} initialization. */
     public Pose2d getTemporaryTargetPose() {
         return temporaryTargetPose;
     }
 
+    /** Returns the configured maximum translational speed in m/s. */
     public double getMaxSpeed() {
         return maxSpeedMetersPerSecond;
     }
 
+    /** Returns the configured maximum angular rate in rad/s. */
     public double getMaxAngular() {
         return maxAngularMetersPerSecond;
     }
@@ -331,6 +340,13 @@ public final class Swerve extends Subsystem1507 {
     // Vision & Localization
     // ============================================================
 
+    /**
+     * Feeds a vision-estimated pose into the pose estimator.
+     *
+     * @param visionPose        estimated robot pose from vision
+     * @param timestampSeconds  FPGA timestamp of the measurement
+     * @param stdDevs           measurement confidence [x (m), y (m), heading (rad)]
+     */
     public void addVisionMeasurement(
         Pose2d visionPose,
         double timestampSeconds,
@@ -343,6 +359,10 @@ public final class Swerve extends Subsystem1507 {
         );
     }
 
+    /**
+     * Resets the robot's heading to 0° so its current facing direction becomes
+     * field-forward. Also resets the pose estimator's heading component.
+     */
     public void zeroHeading() {
         pigeon.setYaw(0.0);
         // In simulation, getHeading() reads simHeadingRadians directly — the Phoenix
@@ -354,6 +374,12 @@ public final class Swerve extends Subsystem1507 {
         poseEstimator.resetPosition(zero, getModulePositions(), pose);
     }
 
+    /**
+     * Resets the robot's pose estimate to a known field position.
+     * Used by autonomous routines and by QuestNavSubsystem after a confirmed pose reset.
+     *
+     * @param pose the new known pose
+     */
     public void resetPose(Pose2d pose) {
         this.pose = pose;
         poseEstimator.resetPosition(
@@ -367,6 +393,7 @@ public final class Swerve extends Subsystem1507 {
     // Fault interpretation
     // ============================================================
 
+    /** Returns true if any drive motor is currently reporting a stall condition. */
     public boolean isAnyDriveStalled() {
         if (edu.wpi.first.wpilibj.RobotBase.isSimulation()) return false;
 
@@ -376,6 +403,7 @@ public final class Swerve extends Subsystem1507 {
             || backRight.isDriveStalled();
     }
 
+    /** Returns true if any steer motor is currently reporting a stall condition. */
     public boolean isAnySteerStalled() {
         if (edu.wpi.first.wpilibj.RobotBase.isSimulation()) return false;
 
