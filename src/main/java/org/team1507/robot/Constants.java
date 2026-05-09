@@ -189,9 +189,6 @@ public class Constants {
         public static final class kTunning {
             // ============================================================
             // Tuning Constants
-            //
-            // All drive command tuning lives here. Students know exactly
-            // where to look when something needs adjustment.
             // ============================================================
 
             /** Proportional gain for simple heading control (rad/s per radian of error). */
@@ -221,7 +218,7 @@ public class Constants {
             public static final double ARRIVE_THRESHOLD = 0.05; // 5 cm
 
             /** Finish angle tolerance for pointToTarget / changeHeading (degrees). */
-            public static final double HEADING_TOLERANCE_DEG = 5.0;
+            public static final double HEADING_TOLERANCE_DEG = 3.0;
 
             /**
              * Lead time for motion compensation in maintainHeadingToTarget (seconds).

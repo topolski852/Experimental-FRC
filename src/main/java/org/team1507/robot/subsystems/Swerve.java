@@ -516,29 +516,49 @@ public final class Swerve extends SubsystemBase {
     }
 
     /**
-     * Rotates the robot to match the heading stored in a target Pose2d,
-     * ignoring that pose's XY position entirely.
+     * Rotates the robot in place to match a specific heading in degrees.
      *
-     * Differs from pointToTarget: this snaps to a specific angle (e.g. 90°),
+     * Finishes within HEADING_TOLERANCE_DEG (5°).
+     *
+     * @param angleDeg  desired heading in degrees (e.g. 90 = left, 180 = backwards)
+     */
+    public Command changeHeading(double angleDeg) {
+        return changeHeading(Rotation2d.fromDegrees(angleDeg));
+    }
+
+    /**
+     * Rotates the robot in place to match the given Rotation2d.
+     *
+     * Differs from pointToTarget: this snaps to a specific angle,
      * not a direction toward a field location. Useful for correcting heading
      * drift after moveThroughPose, or for aligning with a wall.
      *
      * Finishes within HEADING_TOLERANCE_DEG (5°).
      *
-     * @param targetPose  the pose whose .getRotation() defines the desired heading
+     * @param targetHeading  the desired heading
      */
-    public Command changeHeading(Pose2d targetPose) {
+    public Command changeHeading(Rotation2d targetHeading) {
         return run(() -> {
-            double omega = computeOmega(getPose().getRotation(), targetPose.getRotation());
+            double omega = computeOmega(getPose().getRotation(), targetHeading);
             drive(new ChassisSpeeds(0.0, 0.0, omega));
         })
         .until(() ->
             Math.abs(MathUtil.angleModulus(
-                getPose().getRotation().minus(targetPose.getRotation()).getRadians()
+                getPose().getRotation().minus(targetHeading).getRadians()
             )) < Math.toRadians(HEADING_TOLERANCE_DEG)
         )
         .finallyDo(interrupted -> stop())
         .withName("Swerve.changeHeading");
+    }
+
+    /**
+     * Rotates the robot in place to match the heading stored in a target Pose2d,
+     * ignoring that pose's XY position.
+     *
+     * @param targetPose  the pose whose .getRotation() defines the desired heading
+     */
+    public Command changeHeading(Pose2d targetPose) {
+        return changeHeading(targetPose.getRotation());
     }
 
     /**
@@ -621,7 +641,7 @@ public final class Swerve extends SubsystemBase {
             double headingError = MathUtil.angleModulus(
                 targetPose.getRotation().minus(heading).getRadians()
             );
-            double omega = headingError * 5.0;
+            double omega = headingError * HEADING_KP;
 
             driveRobotRelative(ChassisSpeeds.fromFieldRelativeSpeeds(
                 ux * velocity, uy * velocity, omega, heading

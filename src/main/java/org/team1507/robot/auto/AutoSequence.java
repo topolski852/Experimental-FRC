@@ -188,8 +188,8 @@ public final class AutoSequence {
         return this;
     }
 
-    public AutoSequence changeHeading(double heading) {
-        steps.add(AutoBuilder.swerve.changeHeading(new Pose2d(0.0, 0.0, new Rotation2d(heading))));
+    public AutoSequence changeHeading(double headingDeg) {
+        steps.add(AutoBuilder.swerve.changeHeading(headingDeg));
         return this;
     }
 
