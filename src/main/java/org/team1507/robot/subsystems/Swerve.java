@@ -658,6 +658,7 @@ public final class Swerve extends SubsystemBase {
             double dy       = targetPose.getY() - current.getY();
             double distance = Math.hypot(dx, dy);
 
+            double apfSpeed = Math.min(ARRIVE_KP * distance, velocity);
             double ux = (distance > ARRIVE_THRESHOLD) ? dx / distance : 0.0;
             double uy = (distance > ARRIVE_THRESHOLD) ? dy / distance : 0.0;
 
@@ -668,7 +669,7 @@ public final class Swerve extends SubsystemBase {
             double omega = headingError * HEADING_KP;
 
             driveRobotRelative(ChassisSpeeds.fromFieldRelativeSpeeds(
-                ux * velocity, uy * velocity, omega, heading
+                ux * apfSpeed, uy * apfSpeed, omega, heading
             ));
         })
         .until(() ->
@@ -809,16 +810,17 @@ public final class Swerve extends SubsystemBase {
             double dy       = target.getY() - current.getY();
             double distance = Math.hypot(dx, dy);
 
+            double apfSpeed = Math.min(ARRIVE_KP * distance, velocity);
             double ux = (distance > ARRIVE_THRESHOLD) ? dx / distance : 0.0;
             double uy = (distance > ARRIVE_THRESHOLD) ? dy / distance : 0.0;
 
             double headingError = MathUtil.angleModulus(
                 target.getRotation().minus(hdg).getRadians()
             );
-            double omega = headingError * 5.0;
+            double omega = headingError * HEADING_KP;
 
             driveRobotRelative(ChassisSpeeds.fromFieldRelativeSpeeds(
-                ux * velocity, uy * velocity, omega, hdg
+                ux * apfSpeed, uy * apfSpeed, omega, hdg
             ));
         }))
         .until(() ->

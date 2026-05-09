@@ -34,14 +34,15 @@ public final class DriveForwardAuto {
      *
      * Steps:
      *   1. Reset pose to field origin (0, 0, 0°).
-     *   2. Drive forward at full speed for 1.5 seconds.
-     *   3. Stop.
+     *   2. Face forward (0°), drive 2 m at full speed — tests APF deceleration.
+     *   3. Turn left to 90°, drive 1 m at 3 m/s — tests decel at lower cruise speed.
+     *   4. Turn to face back (180°), drive 2 m — returns toward start.
+     *   5. Stop.
      */
     public static Command build() {
         return new AutoSequence()
             .resetPose(new Pose2d())
-            .changeHeading(45)
-            .driveForwardMeters(2.0, 5.0, true)
+            .driveForwardMeters(5.0, 5.0, true)
             .stop()
             .build();
     }

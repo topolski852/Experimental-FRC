@@ -230,6 +230,15 @@ public class Constants {
             /** Finish distance for driveToPoint / driveForwardMeters (meters). */
             public static final double ARRIVE_THRESHOLD = 0.05; // 5 cm
 
+            /**
+             * P gain for the APF attractive field in driveToPoint / driveForwardMeters.
+             * apfSpeed = min(ARRIVE_KP * distance, cruiseVelocity)
+             * Deceleration begins at: cruiseVelocity / ARRIVE_KP meters from target.
+             * At MAX_SPEED (5.04 m/s): ARRIVE_KP=2.5 → decel starts ~2.0 m out.
+             * Increase to decelerate closer to target; decrease to start earlier.
+             */
+            public static final double ARRIVE_KP = 2.5;
+
             /** Finish angle tolerance for pointToTarget / changeHeading (degrees). */
             public static final double HEADING_TOLERANCE_DEG = 3.0;
 
