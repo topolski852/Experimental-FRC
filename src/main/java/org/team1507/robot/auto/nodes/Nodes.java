@@ -115,20 +115,41 @@ public final class Nodes {
     // ─────────────────────────────────────────────────────────────────────
     // FieldElements — where physical field structures are located (Translation2d)
     //
-    // Populate each season once the game is announced.
-    // Use one nested class per structure (e.g. Hub, Tower, Reef, Station).
-    // These are locations only — no heading, because structures don't face a
-    // direction. Robot poses derived from field element positions belong in Robot.
+    // One nested class per structure. Each class exposes:
+    //   CORNER_* — named corners of the structure (Translation2d), for readability
+    //   CORNERS  — ordered array of all corners, used by NodeBoundsTest.
+    //              Walk edges as consecutive pairs (wrapping last→first).
+    //              Works for any convex polygon — square, octagon, etc.
+    //              No bounding box needed; the test derives geometry from CORNERS.
     //
-    // Example of what this looks like when populated:
+    // Corner naming: NEAR = closer to blue DS (low X), FAR = far side (high X).
+    //                LEFT/RIGHT are driver-relative (left = high Y in WPILib coords).
+    // Winding order in CORNERS: clockwise when viewed from above (x right, y up).
     //
-    //   public static final class Hub {
-    //       public static final Translation2d CENTER       = Node.location(4.8,   4.03);
-    //       public static final Translation2d FACE_LEFT    = Node.location(4.612, 4.626);
-    //       public static final Translation2d FACE_RIGHT   = Node.location(4.256, 4.626);
-    //   }
+    // Repopulate each season after game reveal with measured field coordinates.
     // ─────────────────────────────────────────────────────────────────────
     public static final class FieldElements {
-        // TODO: populate after game reveal
+
+        public static final class Hub {
+            // 47 in × 47 in box, centered on field Y, near edge at the Blue Alliance Zone.
+            // Source: Team 340 field measurements — HUB_WIDTH = 47 in = 1.194 m,
+            //         BLUE_ZONE = AprilTag 26 X ≈ 3.048 m, Y_CENTER = 8.21 / 2 = 4.105 m.
+            public static final Translation2d CORNER_NEAR_LEFT  = Node.location(3.048, 4.702);
+            public static final Translation2d CORNER_FAR_LEFT   = Node.location(4.242, 4.702);
+            public static final Translation2d CORNER_FAR_RIGHT  = Node.location(4.242, 3.508);
+            public static final Translation2d CORNER_NEAR_RIGHT = Node.location(3.048, 3.508);
+
+            // Ordered clockwise from top-left. NodeBoundsTest walks these edges
+            // to check if any robot node's spin circle intersects the structure.
+            public static final Translation2d[] CORNERS = {
+                CORNER_NEAR_LEFT,
+                CORNER_FAR_LEFT,
+                CORNER_FAR_RIGHT,
+                CORNER_NEAR_RIGHT,
+            };
+        }
+
+        // Add one class per field structure after game reveal:
+        //   public static final class Trench { ... }
     }
 }
