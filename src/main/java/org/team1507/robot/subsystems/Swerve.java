@@ -27,15 +27,20 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 import static edu.wpi.first.units.Units.Degrees;
+import static edu.wpi.first.units.Units.Rotations;
 
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
+import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.Pigeon2;
 
+import org.team1507.lib.core.impl.ctre.Motor1507;
 import org.team1507.lib.core.logging.Telemetry;
 import org.team1507.lib.core.swerve.SwerveModule1507;
-
+import org.team1507.lib.core.swerve.SwerveModule1507.MathConfig;
+import org.team1507.robot.Constants.RobotMap;
+import org.team1507.robot.Constants.kSwerve;
 import static org.team1507.robot.Constants.kSwerve.kTunning.*;
 
 public final class Swerve extends SubsystemBase {
@@ -98,33 +103,53 @@ public final class Swerve extends SubsystemBase {
     // Constructor
     // ============================================================
 
-    public Swerve(
-        SwerveModule1507 frontLeft,
-        SwerveModule1507 frontRight,
-        SwerveModule1507 backLeft,
-        SwerveModule1507 backRight,
-        Translation2d flLocation,
-        Translation2d frLocation,
-        Translation2d blLocation,
-        Translation2d brLocation,
-        Pigeon2 pigeon,
-        double maxSpeedMetersPerSecond,
-        double maxAngularMetersPerSecond,
-        Matrix<N3, N1> odometryStdDevs,
-        Matrix<N3, N1> visionStdDevs
-    ) {
-        this.frontLeft = frontLeft;
-        this.frontRight = frontRight;
-        this.backLeft = backLeft;
-        this.backRight = backRight;
-        this.pigeon = pigeon;
-        this.maxSpeedMetersPerSecond = maxSpeedMetersPerSecond;
-        this.maxAngularMetersPerSecond = maxAngularMetersPerSecond;
+    public Swerve() {
+        MathConfig math = new MathConfig(
+            kSwerve.DRIVE_GEAR_RATIO, kSwerve.STEER_GEAR_RATIO,
+            kSwerve.COUPLE_RATIO, kSwerve.WHEEL_RADIUS_METERS
+        );
+
+        this.frontLeft = new SwerveModule1507("FrontLeft",
+            new Motor1507("FL_Drive", Motor1507.Type.FX, RobotMap.FL_DRIVE, kSwerve.FRONT_LEFT_DRIVE_CONFIG),
+            new Motor1507("FL_Steer", Motor1507.Type.FX, RobotMap.FL_STEER, kSwerve.FRONT_LEFT_STEER_CONFIG),
+            new CANcoder(RobotMap.FL_ENCODER),
+            new Rotation2d(Rotations.of(RobotMap.FL_ENCODER_OFFSET)),
+            math, kSwerve.DRIVE_METERS_SCALE
+        );
+
+        this.frontRight = new SwerveModule1507("FrontRight",
+            new Motor1507("FR_Drive", Motor1507.Type.FX, RobotMap.FR_DRIVE, kSwerve.FRONT_RIGHT_DRIVE_CONFIG),
+            new Motor1507("FR_Steer", Motor1507.Type.FX, RobotMap.FR_STEER, kSwerve.FRONT_RIGHT_STEER_CONFIG),
+            new CANcoder(RobotMap.FR_ENCODER),
+            new Rotation2d(Rotations.of(RobotMap.FR_ENCODER_OFFSET)),
+            math, kSwerve.DRIVE_METERS_SCALE
+        );
+
+        this.backLeft = new SwerveModule1507("BackLeft",
+            new Motor1507("BL_Drive", Motor1507.Type.FX, RobotMap.BL_DRIVE, kSwerve.BACK_LEFT_DRIVE_CONFIG),
+            new Motor1507("BL_Steer", Motor1507.Type.FX, RobotMap.BL_STEER, kSwerve.BACK_LEFT_STEER_CONFIG),
+            new CANcoder(RobotMap.BL_ENCODER),
+            new Rotation2d(Rotations.of(RobotMap.BL_ENCODER_OFFSET)),
+            math, kSwerve.DRIVE_METERS_SCALE
+        );
+
+        this.backRight = new SwerveModule1507("BackRight",
+            new Motor1507("BR_Drive", Motor1507.Type.FX, RobotMap.BR_DRIVE, kSwerve.BACK_RIGHT_DRIVE_CONFIG),
+            new Motor1507("BR_Steer", Motor1507.Type.FX, RobotMap.BR_STEER, kSwerve.BACK_RIGHT_STEER_CONFIG),
+            new CANcoder(RobotMap.BR_ENCODER),
+            new Rotation2d(Rotations.of(RobotMap.BR_ENCODER_OFFSET)),
+            math, kSwerve.DRIVE_METERS_SCALE
+        );
+
+        this.pigeon = new Pigeon2(RobotMap.PIGEON2);
+        this.maxSpeedMetersPerSecond = kSwerve.MAX_SPEED;
+        this.maxAngularMetersPerSecond = kSwerve.MAX_ANGULAR_RATE;
 
         this.yaw = pigeon.getYaw();
 
         this.kinematics = new SwerveDriveKinematics(
-            flLocation, frLocation, blLocation, brLocation
+            kSwerve.FRONT_LEFT_LOCATION, kSwerve.FRONT_RIGHT_LOCATION,
+            kSwerve.BACK_LEFT_LOCATION,  kSwerve.BACK_RIGHT_LOCATION
         );
 
         this.poseEstimator = new SwerveDrivePoseEstimator(
@@ -132,14 +157,13 @@ public final class Swerve extends SubsystemBase {
             getHeading(),
             getModulePositions(),
             pose,
-            odometryStdDevs,
-            visionStdDevs
+            kSwerve.ODOMETRY_STD_DEV,
+            kSwerve.VISION_STD_DEV
         );
 
-        // After all signals are configured, disable unused CAN signals on every swerve device.
-        // This keeps the CAN bus from being flooded with data the robot never reads.
+        // Disable unused CAN signals on every swerve device to avoid flooding the bus.
         ParentDevice.optimizeBusUtilizationForAll(
-            4.0, // minimum acceptable update rate for disabled signals (Hz)
+            4.0,
             frontLeft.getDriveDevice(),  frontLeft.getSteerDevice(),  frontLeft.getEncoderDevice(),
             frontRight.getDriveDevice(), frontRight.getSteerDevice(), frontRight.getEncoderDevice(),
             backLeft.getDriveDevice(),   backLeft.getSteerDevice(),   backLeft.getEncoderDevice(),

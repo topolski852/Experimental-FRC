@@ -37,6 +37,7 @@ public class Constants {
      * All TalonFX, TalonFXS, CANcoder, and Pigeon2 devices must be on the same bus.
      */
     public static final CANBus CAN_BUS = new CANBus("rio");
+    public static final CANBus SWERVE_BUS = new CANBus("canivore");
 
     // ============================================================
     // Hardware Map — all CAN device IDs and sensor offsets in one place.
@@ -86,6 +87,9 @@ public class Constants {
         // Theoretical free speed (m/s) at 12 V applied output;
         // This needs to be tuned to your individual robot
         public static final LinearVelocity SPEED_AT_12_VOLTS = MetersPerSecond.of(5.04);
+
+        /** Maximum translational speed in m/s — pre-extracted for use as a plain double. */
+        public static final double MAX_SPEED = SPEED_AT_12_VOLTS.magnitude();
 
         // Every 1 rotation of the azimuth results in kCoupleRatio drive motor turns;
         // This may need to be tuned to your individual robot
@@ -185,6 +189,15 @@ public class Constants {
                 .withContinuousWrap()
                 .build();
         public static final Translation2d BACK_RIGHT_LOCATION = new Translation2d(Inches.of(-10.7375), Inches.of(-10.7375));
+
+        /**
+         * Maximum chassis angular rate (rad/s) = v_max / drive_radius.
+         * Derived from existing constants — stays correct if wheel speed or
+         * module positions change. At 5.04 m/s with modules at ±10.7375" on
+         * both axes: r ≈ 0.386 m → ~13.1 rad/s (~2.08 rot/s).
+         */
+        public static final double MAX_ANGULAR_RATE =
+            MAX_SPEED / FRONT_LEFT_LOCATION.getNorm();
 
         public static final class kTunning {
             // ============================================================
