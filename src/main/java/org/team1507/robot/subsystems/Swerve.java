@@ -265,14 +265,20 @@ public final class Swerve extends Subsystem1507 {
 
     /**
      * Sets all modules to the X configuration (FL/BR at +45°, FR/BL at -45°).
-     * Creates a cross pattern that strongly resists pushing.
-     * Called every loop by lockCommand() to hold the configuration continuously.
+     *
+     * <p>Uses {@code brakeToAngle()} on each module rather than
+     * {@code setDesiredState()} so the steer angle is applied unconditionally.
+     * {@code setDesiredState()} has an anti-jitter guard that skips steer
+     * updates when speed is near zero — which would prevent the X pattern
+     * from ever forming since brake() always passes speed = 0.
+     *
+     * <p>Called every loop by {@link #brakeCommand()} to hold the configuration.
      */
-    public void lock() {
-        frontLeft.setDesiredState(new SwerveModuleState(0.0,  Rotation2d.fromDegrees(45)));
-        frontRight.setDesiredState(new SwerveModuleState(0.0, Rotation2d.fromDegrees(-45)));
-        backLeft.setDesiredState(new SwerveModuleState(0.0,   Rotation2d.fromDegrees(-45)));
-        backRight.setDesiredState(new SwerveModuleState(0.0,  Rotation2d.fromDegrees(45)));
+    public void brake() {
+        frontLeft.brakeToAngle(Rotation2d.fromDegrees( 45));
+        frontRight.brakeToAngle(Rotation2d.fromDegrees(-45));
+        backLeft.brakeToAngle(Rotation2d.fromDegrees(-45));
+        backRight.brakeToAngle(Rotation2d.fromDegrees( 45));
     }
 
     // ============================================================
@@ -435,7 +441,7 @@ public final class Swerve extends Subsystem1507 {
     // ║    1. Basic Drive (teleop)                                       ║
     // ║    2. Heading Control (pointing, aiming)                         ║
     // ║    3. Autonomous Movement (driveToPoint, moveThroughPose, etc.)  ║
-    // ║    4. Utility (lock, resetPose)                                  ║
+    // ║    4. Utility (brake, resetPose)                                 ║
     // ╚══════════════════════════════════════════════════════════════════╝
 
 
@@ -855,19 +861,19 @@ public final class Swerve extends Subsystem1507 {
     // ─────────────────────────────────────────────────────────────────
 
     /**
-     * Locks all modules in the X configuration to resist pushing.
+     * Brakes all modules in the X configuration to resist pushing.
      *
      * FL and BR point to +45°, FR and BL point to -45°. The crossed pattern
      * makes it very hard to push the robot out of position.
      *
      * The command runs continuously and must be interrupted to exit.
-     * Bind with whileTrue() so the lock releases when the button is released.
+     * Bind with whileTrue() so the brake releases when the button is released.
      *
      * Use case: hold position while shooting, resist defense, stay on a slope.
      */
-    public Command lockCommand() {
-        return run(this::lock)
+    public Command brakeCommand() {
+        return run(this::brake)
             .finallyDo(interrupted -> stop())
-            .withName("Swerve.lock");
+            .withName("Swerve.brake");
     }
 }

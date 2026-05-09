@@ -149,6 +149,28 @@ public final class SwerveModule1507 {
         }
     }
 
+    /**
+     * Commands the steer directly to a target angle and stops the drive motor.
+     *
+     * <p>Unlike {@link #setDesiredState}, this method bypasses the anti-jitter
+     * guard that skips steer updates when speed is near zero. Use this for
+     * X-brake mode where the target angle must be applied regardless
+     * of drive speed.
+     *
+     * @param angle the target steer angle
+     */
+    public void brakeToAngle(Rotation2d angle) {
+        drive.stop();
+        steer.setPositionVoltage(angle.getRotations(), 0.0);
+
+        if (RobotBase.isSimulation()) {
+            simSteerAngleRotations = angle.getRotations();
+            simDriveVelocityRps    = 0.0;
+        }
+
+        lastAngle = angle;
+    }
+
     // ============================================================
     // Simulation Update
     // ============================================================

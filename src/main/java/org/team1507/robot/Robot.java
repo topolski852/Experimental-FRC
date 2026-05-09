@@ -2,7 +2,7 @@
 //  ██║    ██║██╔══██╗██╔══██╗██║     ██╔═══██╗██╔════╝██║ ██╔╝██╔════╝
 //  ██║ █╗ ██║███████║██████╔╝██║     ██║   ██║██║     █████╔╝ ███████╗
 //  ██║███╗██║██╔══██║██╔══██╗██║     ██║   ██║██║     ██╔═██╗ ╚════██║
-//  ╚███╔███╔╝██║  ██║██║  ██║███████╗╚██████╔╝╚██████╔╝╚██║  ██╗███████║
+//  ╚███╔███╔╝██║  ██║██║  ██║███████╗╚██████╔╝╚██████╗██║  ██╗███████║
 //   ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚══════╝
 //                           TEAM 1507 WARLOCKS
 
@@ -108,8 +108,8 @@ public final class Robot extends LoggedRobot {
 
         // ── Driver — swerve utilities + shooting ───────────────────────────
 
-        // Swerve utilities
-        driver.start().onTrue(swerve.lockCommand());
+        // Swerve brake — hold Start to lock wheels in X pattern, release to resume driving
+        driver.start().whileTrue(swerve.brakeCommand());
 
         // Failsafe — cancels all running commands (see RobotBehaviors for details)
         driver.back().onTrue(RobotBehaviors.failsafe());

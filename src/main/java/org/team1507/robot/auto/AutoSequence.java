@@ -13,13 +13,18 @@ import static edu.wpi.first.units.Units.RotationsPerSecond;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 
+import org.team1507.robot.RobotBehaviors;
 import org.team1507.robot.subsystems.ArmSystem.Position;
+import org.team1507.robot.subsystems.Elevator.Setpoint;
+
+import static org.team1507.robot.Constants.kShooter.DEFAULT_RPM;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AutoSequence
@@ -30,8 +35,10 @@ import org.team1507.robot.subsystems.ArmSystem.Position;
 //
 // BASIC USAGE:
 //   new AutoSequence()
-//       .resetPose(new Pose2d())
-//       .driveFieldRelative(2.0, 0.0, 0.0, 1.5)
+//       .startTimer()
+//       .resetPose(Nodes.Robot.Start.RIGHT)
+//       .driveToPoint(Nodes.Robot.Score.RIGHT, 1.5, true)
+//       .shootUntil(5.0)
 //       .stop()
 //       .build();
 //
@@ -39,33 +46,30 @@ import org.team1507.robot.subsystems.ArmSystem.Position;
 //   Speed modifiers must appear immediately before a motion command.
 //   They apply to that one step only and then reset automatically.
 //
-//   .withSpeed(2.0).driveFieldRelative(2.0, 0.0, 0.0, 1.5)
-//   .slow().driveFieldRelative(1.0, 0.0, 0.0, 1.0)
-//   .creep().driveFieldRelative(0.5, 0.0, 0.0, 0.5)
+//   .slow().driveToPoint(Nodes.Robot.Pickup.APPROACH_RIGHT, 5.0, true)
+//   .creep().driveToPoint(Nodes.Robot.Pickup.STATION_RIGHT, 1.0, true)
 //
 // GROUPS (parallel / race / deadline):
 //   Each branch inside a group is its own mini-sequence, written as a lambda:
 //       seq -> seq.step1().step2()
 //
 //   The "seq" is a fresh AutoSequence for that branch. You can chain as many
-//   steps as needed inside one branch:
-//       seq -> seq.slow().driveFieldRelative(1.0, 0.0, 0.0, 1.0).stop()
-//
+//   steps as needed inside one branch.
 //   Speed modifiers work normally inside branches — they only affect the step
 //   immediately after them inside that branch.
 //
 //   Examples:
 //     .parallel(
 //         seq -> seq.armHigh(),
-//         seq -> seq.motorForward()
+//         seq -> seq.intakeRun()
 //     )
 //     .race(
-//         seq -> seq.driveFieldRelative(2.0, 0.0, 0.0, 3.0),
+//         seq -> seq.driveToPoint(Nodes.Robot.Score.RIGHT, 5.0, true),
 //         seq -> seq.waitSeconds(2.0)
 //     )
 //     .deadline(
-//         seq -> seq.driveFieldRelative(2.0, 0.0, 0.0, 3.0),  // <-- deadline branch
-//         seq -> seq.motorForward()                             // <-- runs until deadline ends
+//         seq -> seq.driveToPoint(Nodes.Robot.Pickup.APPROACH_RIGHT, 5.0, true),  // deadline
+//         seq -> seq.intakeRun()                                                   // runs alongside
 //     )
 //
 // HOW TO ADD NEW AUTO STEPS:
@@ -109,8 +113,8 @@ public final class AutoSequence {
     // motion command will consume. After that command runs, the override resets.
     //
     // Rule: always place a speed modifier immediately before a motion command.
-    //   CORRECT:   .slow().driveFieldRelative(1.0, 0.0, 0.0, 1.5)
-    //   INCORRECT: .slow().armHigh().driveFieldRelative(...)  ← slow is wasted on armHigh
+    //   CORRECT:   .slow().driveToPoint(target, 5.0, true)
+    //   INCORRECT: .slow().armHigh().driveToPoint(...)  ← slow is wasted on armHigh
     // =========================================================================
 
     /**
@@ -152,7 +156,7 @@ public final class AutoSequence {
         return this;
     }
 
-    // Internal helper — reads and clears the speed override for one step.
+    // Internal helpers — read and clear the speed/angular overrides for one step.
     private double consumeSpeed() {
         double speed = (nextSpeedOverride != null) ? nextSpeedOverride : AutoBuilder.swerve.getMaxSpeed();
         nextSpeedOverride   = null;
@@ -162,8 +166,6 @@ public final class AutoSequence {
 
     private double consumeAngular() {
         double angular = (nextAngularOverride != null) ? nextAngularOverride : AutoBuilder.swerve.getMaxAngular();
-        // Note: nextAngularOverride is already cleared by consumeSpeed().
-        // If using consumeAngular() independently, clear here too:
         nextAngularOverride = null;
         return angular;
     }
@@ -182,16 +184,19 @@ public final class AutoSequence {
         return this;
     }
 
+    /** Drives forward a fixed distance along the robot's current heading. */
     public AutoSequence driveForwardMeters(double distanceMeters, double velocity, boolean stopAtEnd) {
         steps.add(AutoBuilder.swerve.driveForwardMeters(distanceMeters, velocity, stopAtEnd));
         return this;
     }
 
+    /** Drives to a field pose and optionally stops on arrival. */
     public AutoSequence driveToPoint(Pose2d target, double velocity, boolean stopAtEnd) {
         steps.add(AutoBuilder.swerve.driveToPoint(target, velocity, stopAtEnd));
         return this;
     }
 
+    /** Rotates to face a target heading in degrees. */
     public AutoSequence changeHeading(double headingDeg) {
         steps.add(AutoBuilder.swerve.changeHeading(headingDeg));
         return this;
@@ -230,6 +235,38 @@ public final class AutoSequence {
 
 
     // =========================================================================
+    // ELEVATOR COMMANDS
+    //
+    // Positional mechanism — goTo vocabulary. Each command waits until the
+    // elevator reaches the setpoint (AT_SETPOINT) before the sequence continues.
+    // =========================================================================
+
+    /** Raises the elevator to the HIGH position and waits until it arrives. */
+    public AutoSequence elevatorHigh() {
+        steps.add(AutoBuilder.elevator.goToCommand(Setpoint.HIGH));
+        return this;
+    }
+
+    /** Raises the elevator to the MID position and waits until it arrives. */
+    public AutoSequence elevatorMid() {
+        steps.add(AutoBuilder.elevator.goToCommand(Setpoint.MID));
+        return this;
+    }
+
+    /** Lowers the elevator to the LOW position and waits until it arrives. */
+    public AutoSequence elevatorLow() {
+        steps.add(AutoBuilder.elevator.goToCommand(Setpoint.LOW));
+        return this;
+    }
+
+    /** Lowers the elevator to the STOW position and waits until it arrives. */
+    public AutoSequence elevatorStow() {
+        steps.add(AutoBuilder.elevator.goToCommand(Setpoint.STOW));
+        return this;
+    }
+
+
+    // =========================================================================
     // INTAKE COMMANDS
     //
     // Roller intake — run / reverse / stop vocabulary.
@@ -255,40 +292,154 @@ public final class AutoSequence {
 
 
     // =========================================================================
+    // FEEDER COMMANDS
+    //
+    // Velocity-controlled ball feeder — feed / vomit / stop vocabulary.
+    // In most cases prefer RobotBehaviors.shoot() / shootUntil() over calling
+    // feederFeed() directly, since shoot() waits for the shooter to reach RPM
+    // before enabling the feeder. Use feederFeed() directly only when you need
+    // granular control (e.g. feeding without the shooter spinning up first).
+    // =========================================================================
+
+    /**
+     * Runs the feeder at feed speed. Runs until interrupted.
+     *
+     * <p>Prefer {@link #shootUntil} for coordinated Shooter + Feeder sequences.
+     */
+    public AutoSequence feederFeed() {
+        steps.add(AutoBuilder.feeder.feedCommand());
+        return this;
+    }
+
+    /**
+     * Runs the feeder in reverse to eject a jammed piece. Runs until interrupted.
+     */
+    public AutoSequence feederVomit() {
+        steps.add(AutoBuilder.feeder.vomitCommand());
+        return this;
+    }
+
+    /** Stops the feeder. */
+    public AutoSequence feederStop() {
+        steps.add(AutoBuilder.feeder.stopCommand());
+        return this;
+    }
+
+
+    // =========================================================================
+    // SHOOTER COMMANDS
+    //
+    // Flywheel shooter — spinUp / stop vocabulary.
+    // In most cases prefer shoot() / shootUntil() over calling these directly,
+    // since those behaviors handle Feeder coordination automatically.
+    // Use spinUp / stop directly only for pre-spinning or staged sequences.
+    // =========================================================================
+
+    /**
+     * Spins up the shooter to {@code DEFAULT_RPM} and holds speed until interrupted.
+     *
+     * <p>Prefer {@link #shootUntil} for timed shooting phases.
+     */
+    public AutoSequence shooterSpinUp() {
+        steps.add(AutoBuilder.shooter.spinUpCommand(DEFAULT_RPM));
+        return this;
+    }
+
+    /**
+     * Spins up the shooter to a custom RPM and holds speed until interrupted.
+     *
+     * @param rpm target speed in rotations per minute
+     */
+    public AutoSequence shooterSpinUp(double rpm) {
+        steps.add(AutoBuilder.shooter.spinUpCommand(rpm));
+        return this;
+    }
+
+    /** Stops the shooter motor. */
+    public AutoSequence shooterStop() {
+        steps.add(AutoBuilder.shooter.stopCommand());
+        return this;
+    }
+
+
+    // =========================================================================
     // ROBOT BEHAVIORS
     //
     // Multi-subsystem coordinated actions defined in RobotBehaviors.java.
     // These are the same commands used for teleop button bindings.
     // Add a one-line wrapper here for each behavior you want available in auto.
-    //
-    // Example (once RobotBehaviors has the method):
-    //   public AutoSequence scoreHigh() {
-    //       steps.add(RobotBehaviors.scoreHigh());
-    //       return this;
-    //   }
     // =========================================================================
+
+    /**
+     * Spins up the shooter and feeds once at speed.
+     * The feeder only engages after the shooter confirms it has reached RPM.
+     *
+     * <p>This command runs until interrupted. Use {@link #shootUntil} when you
+     * need the shooter to stop at a specific match time.
+     */
+    public AutoSequence shoot() {
+        steps.add(RobotBehaviors.shoot());
+        return this;
+    }
+
+    /**
+     * Shoots until the auto timer reaches {@code endTime} seconds, then stops.
+     *
+     * <p>Internally races {@link RobotBehaviors#shoot()} against the sequence's
+     * own timer, so no held reference to the outer AutoSequence is needed at the
+     * call site. Always call {@link #startTimer()} before this step.
+     *
+     * <p>Use 14.99 s for the final shooting phase so the command ends cleanly
+     * before auto expires and doesn't carry over into teleop.
+     *
+     * <pre>
+     *   new AutoSequence()
+     *       .startTimer()
+     *       .driveToPoint(Nodes.Robot.Score.RIGHT, 1.5, true)
+     *       .shootUntil(5.0)
+     *       ...
+     *       .shootUntil(14.99)
+     *       .build();
+     * </pre>
+     */
+    public AutoSequence shootUntil(double endTime) {
+        steps.add(Commands.race(
+            RobotBehaviors.shoot(),
+            Commands.waitUntil(() -> autoTimer.get() >= endTime)
+        ));
+        return this;
+    }
+
+    /**
+     * Stows all mechanisms to a safe travel position.
+     *
+     * <p>Stops the intake, then retracts the arm and lowers the elevator in parallel.
+     * Safe to call mid-routine after a scoring sequence.
+     */
+    public AutoSequence stow() {
+        steps.add(RobotBehaviors.stow());
+        return this;
+    }
 
 
     // =========================================================================
-    // ADD NEW SUBSYSTEM STEPS BELOW THIS LINE (each year)
+    // HOW TO ADD NEW SUBSYSTEM STEPS (each year)
     //
-    // Pattern for a free-spinner subsystem (e.g. Shooter):
-    //   public AutoSequence shooterSpin() {
-    //       steps.add(AutoBuilder.shooterSpin());
-    //       return this;
-    //   }
-    //   public AutoSequence shooterStop() {
-    //       steps.add(AutoBuilder.shooterStop());
-    //       return this;
-    //   }
-    //
-    // Pattern for a positional subsystem (e.g. Elevator):
+    // For a positional subsystem (reaches a setpoint, then finishes):
     //   public AutoSequence elevatorHigh() {
-    //       steps.add(AutoBuilder.elevatorHigh());
+    //       steps.add(AutoBuilder.elevator.goToCommand(Setpoint.HIGH));
     //       return this;
     //   }
-    //   public AutoSequence elevatorStow() {
-    //       steps.add(AutoBuilder.elevatorStow());
+    //
+    // For a free-running subsystem (runs until interrupted):
+    //   public AutoSequence feederFeed() {
+    //       steps.add(AutoBuilder.feeder.feedCommand());
+    //       return this;
+    //   }
+    //
+    // For a multi-subsystem behavior from RobotBehaviors:
+    //   public AutoSequence ejectPiece() {
+    //       steps.add(RobotBehaviors.ejectPiece());
     //       return this;
     //   }
     // =========================================================================
@@ -318,7 +469,7 @@ public final class AutoSequence {
      * Example:
      *   .parallel(
      *       seq -> seq.armHigh(),
-     *       seq -> seq.motorForward()
+     *       seq -> seq.intakeRun()
      *   )
      */
     public AutoSequence parallel(Branch... branches) {
@@ -338,7 +489,7 @@ public final class AutoSequence {
      *
      * Example:
      *   .race(
-     *       seq -> seq.driveFieldRelative(2.0, 0.0, 0.0, 5.0),
+     *       seq -> seq.driveToPoint(Nodes.Robot.Score.RIGHT, 5.0, true),
      *       seq -> seq.waitSeconds(2.0)
      *   )
      *   // Robot drives for at most 5 seconds, but stops after 2 seconds
@@ -364,8 +515,8 @@ public final class AutoSequence {
      *
      * Example:
      *   .deadline(
-     *       seq -> seq.driveFieldRelative(2.0, 0.0, 0.0, 3.0),  // drives for 3 sec (deadline)
-     *       seq -> seq.motorForward()                             // motor runs while driving
+     *       seq -> seq.driveToPoint(Nodes.Robot.Pickup.APPROACH_RIGHT, 5.0, true),  // deadline
+     *       seq -> seq.intakeRun()                                                   // runs alongside
      *   )
      */
     public AutoSequence deadline(Branch deadlineBranch, Branch... others) {
@@ -392,7 +543,7 @@ public final class AutoSequence {
     //
     // The auto timer lets you gate actions on match time rather than duration.
     // Always call .startTimer() as your first step if you plan to use
-    // .shootUntil(), .waitUntilTime(), or .endAtTime().
+    // .shootUntil() or .waitUntilTime().
     // =========================================================================
 
     /**
@@ -418,13 +569,15 @@ public final class AutoSequence {
 
     /**
      * Returns a Command that completes when the timer reaches a given time.
-     * Use this as the deadline branch in a .race() or .deadline() group.
+     *
+     * <p>Prefer {@link #shootUntil} for shooting phases. Use this directly only
+     * when you need to gate a custom command not yet wrapped in AutoSequence.
      *
      * Example:
-     *   .race(
-     *       seq -> seq.addCommand(endAtTime(13.5)),
-     *       seq -> seq.motorForward()
-     *   )
+     *   .addCommand(Commands.race(
+     *       AutoBuilder.feeder.feedCommand(),
+     *       endAtTime(13.5)
+     *   ))
      */
     public Command endAtTime(double matchTimeSeconds) {
         return Commands.waitUntil(() -> autoTimer.get() >= matchTimeSeconds);
@@ -443,21 +596,19 @@ public final class AutoSequence {
 
     /**
      * Waits until a condition becomes true before proceeding.
-     * Use with method references: .waitUntil(arm::isAtTarget)
+     * Use with method references: .waitUntil(shooter::isAtRPM)
      */
-    public AutoSequence waitUntil(java.util.function.BooleanSupplier condition) {
+    public AutoSequence waitUntil(BooleanSupplier condition) {
         steps.add(Commands.waitUntil(condition));
         return this;
     }
 
     /**
      * Adds any Command directly into the sequence.
-     * Use this to insert commands from RobotBehaviors or subsystems
-     * that don't yet have a named wrapper method here.
+     * Use this to insert commands that don't yet have a named wrapper method here.
      *
      * Example:
-     *   .addCommand(RobotBehaviors.scoreHigh())
-     *   .addCommand(AutoBuilder.waitSeconds(0.5))
+     *   .addCommand(RobotBehaviors.ejectPiece())
      */
     public AutoSequence addCommand(Command command) {
         steps.add(command);
@@ -494,9 +645,6 @@ public final class AutoSequence {
      * Functional interface for defining a branch inside a group.
      *
      * Written as a lambda:  seq -> seq.step1().step2()
-     *
-     * This is the same as Java's standard functional interface pattern —
-     * the lambda receives one argument (seq) and calls methods on it.
      */
     @FunctionalInterface
     public interface Branch {
