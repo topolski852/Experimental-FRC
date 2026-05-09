@@ -209,7 +209,7 @@ public class Constants {
 
         // -- Command Tuning ----------------------------------------------
 
-        public static final class kTunning {
+        public static final class kTuning {
 
             /** Proportional gain for simple heading control (rad/s per radian of error). */
             public static final double HEADING_KP = 5.5;

@@ -41,7 +41,7 @@ import org.team1507.lib.core.swerve.SwerveModule1507;
 import org.team1507.lib.core.swerve.SwerveModule1507.MathConfig;
 import org.team1507.robot.Constants.RobotMap;
 import org.team1507.robot.Constants.kSwerve;
-import static org.team1507.robot.Constants.kSwerve.kTunning.*;
+import static org.team1507.robot.Constants.kSwerve.kTuning.*;
 
 public final class Swerve extends Subsystem1507 {
 
