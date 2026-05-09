@@ -188,6 +188,11 @@ public final class AutoSequence {
         return this;
     }
 
+    public AutoSequence driveToPoint(Pose2d target, double velocity, boolean stopAtEnd) {
+        steps.add(AutoBuilder.swerve.driveToPoint(target, velocity, stopAtEnd));
+        return this;
+    }
+
     public AutoSequence changeHeading(double headingDeg) {
         steps.add(AutoBuilder.swerve.changeHeading(headingDeg));
         return this;

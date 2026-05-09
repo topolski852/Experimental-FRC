@@ -13,12 +13,14 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 
 import org.team1507.lib.core.framework.LoggedRobot;
 import org.team1507.robot.subsystems.*;
 import org.team1507.robot.auto.AutoBuilder;
 import org.team1507.robot.auto.routines.DriveForwardAuto;
+import org.team1507.robot.auto.routines.ScorePickupScoreAuto;
 import org.team1507.robot.Constants.RobotMap;
 import org.team1507.robot.Constants.kSwerve;
 
@@ -62,6 +64,11 @@ public final class Robot extends LoggedRobot {
             DriveForwardAuto.build()
         );
 
+        autoChooser.addOption(
+            "Score Pickup Score",
+            ScorePickupScoreAuto.build()
+        );
+
         SmartDashboard.putData("Auto Mode", autoChooser);
 
         // Initialize controllers
@@ -87,8 +94,11 @@ public final class Robot extends LoggedRobot {
         driver.y().onTrue(arm.retractCommand());
 
         driver.start().onTrue(swerve.lockCommand());
-
         driver.back().onTrue(swerve.stopCommand());
+
+        // Point the robot toward the opposing alliance wall, then press left bumper
+        // to zero the gyro. Required after any hot code deploy without a power cycle.
+        driver.leftBumper().onTrue(swerve.zeroHeadingCommand());
     }
 
     private void configureDefaultBindings() {
@@ -114,7 +124,7 @@ public final class Robot extends LoggedRobot {
     public void autonomousInit() {
         m_autoCommand = autoChooser.getSelected();
         if (m_autoCommand != null) {
-            m_autoCommand.schedule();
+            CommandScheduler.getInstance().schedule(m_autoCommand);
         }
     }
 

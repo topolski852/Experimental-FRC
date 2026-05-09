@@ -338,6 +338,13 @@ public final class Swerve extends SubsystemBase {
 
     public void zeroHeading() {
         pigeon.setYaw(0.0);
+        // In simulation, getHeading() reads simHeadingRadians directly — the Phoenix
+        // sim backend doesn't update it synchronously from setYaw(). Mirror the reset
+        // here so simulation and real hardware behave identically.
+        simHeadingRadians = 0.0;
+        Rotation2d zero = new Rotation2d();
+        pose = new Pose2d(pose.getTranslation(), zero);
+        poseEstimator.resetPosition(zero, getModulePositions(), pose);
     }
 
     public void resetPose(Pose2d pose) {
@@ -472,6 +479,16 @@ public final class Swerve extends SubsystemBase {
     public Command stopCommand() {
         return runOnce(this::stop)
             .withName("Swerve.stop");
+    }
+
+    /**
+     * Zeroes the gyro so the robot's current facing direction becomes field-forward (0°).
+     * Bind to a controller button (left bumper is standard) and press while the robot
+     * is physically pointing toward the opposing alliance wall.
+     */
+    public Command zeroHeadingCommand() {
+        return runOnce(this::zeroHeading)
+            .withName("Swerve.zeroHeading");
     }
 
     /** Resets the robot's pose estimate to a given field position. */
