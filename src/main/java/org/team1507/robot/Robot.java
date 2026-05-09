@@ -2,7 +2,7 @@
 //  ██║    ██║██╔══██╗██╔══██╗██║     ██╔═══██╗██╔════╝██║ ██╔╝██╔════╝
 //  ██║ █╗ ██║███████║██████╔╝██║     ██║   ██║██║     █████╔╝ ███████╗
 //  ██║███╗██║██╔══██║██╔══██╗██║     ██║   ██║██║     ██╔═██╗ ╚════██║
-//  ╚███╔███╔╝██║  ██║██║  ██║███████╗╚██████╔╝╚██████╗██║  ██╗███████║
+//  ╚███╔███╔╝██║  ██║██║  ██║███████╗╚██████╔╝╚██████╔╝╚██║  ██╗███████║
 //   ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚══════╝
 //                           TEAM 1507 WARLOCKS
 
@@ -25,6 +25,7 @@ import org.team1507.robot.Constants.RobotMap;
 import org.team1507.robot.Constants.kQuest;
 import org.team1507.robot.Constants.kSwerve;
 import org.team1507.robot.subsystems.*;
+import org.team1507.robot.subsystems.Elevator.Setpoint;
 
 public final class Robot extends LoggedRobot {
 
@@ -32,16 +33,20 @@ public final class Robot extends LoggedRobot {
     // Subsystems
     // -------------------------------------------------------------------------
 
-    public final Swerve             swerve;
-    public final QuestNavSubsystem  questNav;
-    public final ArmSystem          arm;
-    public final BasicMotor         basicMotor;
+    public final Swerve            swerve;
+    public final QuestNavSubsystem questNav;
+    public final ArmSystem         arm;
+    public final Elevator          elevator;
+    public final Shooter           shooter;
+    public final Feeder            feeder;
+    public final Intake            intake;
 
     // -------------------------------------------------------------------------
     // Controllers
     // -------------------------------------------------------------------------
 
     private final CommandXboxController driver;
+    private final CommandXboxController operator;
 
     // -------------------------------------------------------------------------
     // Autonomous
@@ -57,14 +62,17 @@ public final class Robot extends LoggedRobot {
     public Robot() {
 
         // Subsystems — swerve first; questNav takes method references from it.
-        swerve     = new Swerve();
-        questNav   = new QuestNavSubsystem(
+        swerve    = new Swerve();
+        questNav  = new QuestNavSubsystem(
             swerve::addVisionMeasurement,
             swerve::resetPose,
             kQuest.ROBOT_TO_QUEST
         );
-        arm        = new ArmSystem();
-        basicMotor = new BasicMotor();
+        arm      = new ArmSystem();
+        elevator = new Elevator();
+        shooter  = new Shooter();
+        feeder   = new Feeder();
+        intake   = new Intake();
 
         // Pre-match pose preset buttons (visible in Elastic while disabled).
         // Place the robot at the known starting position and press the matching
@@ -80,13 +88,14 @@ public final class Robot extends LoggedRobot {
             .publishToDashboard();
 
         // Autonomous chooser
-        AutoBuilder.init(swerve, arm, basicMotor);
+        AutoBuilder.init(swerve, arm, elevator, shooter, feeder, intake);
         autoChooser.setDefaultOption("Drive Forward", DriveForwardAuto.build());
         autoChooser.addOption("Score Pickup Score", ScorePickupScoreAuto.build());
         SmartDashboard.putData("Auto Mode", autoChooser);
 
         // Controllers and bindings
-        driver = new CommandXboxController(RobotMap.DRIVER_CONTROLLER);
+        driver   = new CommandXboxController(RobotMap.DRIVER_CONTROLLER);
+        operator = new CommandXboxController(RobotMap.OPERATOR_CONTROLLER);
         configureBindings();
         configureDefaultBindings();
     }
@@ -97,18 +106,45 @@ public final class Robot extends LoggedRobot {
 
     private void configureBindings() {
 
-        driver.a().whileTrue(basicMotor.runForwardCommand());
-        driver.b().whileTrue(basicMotor.runReverseCommand());
+        // ── Driver — swerve utilities + shooting ───────────────────────────
 
-        driver.x().onTrue(arm.deployCommand());
-        driver.y().onTrue(arm.retractCommand());
-
+        // Swerve utilities
         driver.start().onTrue(swerve.lockCommand());
-        driver.back().onTrue(swerve.stopCommand());
 
-        // Point the robot toward the opposing alliance wall, then press left bumper
+        // Failsafe — cancels all running commands (see RobotBehaviors for details)
+        driver.back().onTrue(RobotBehaviors.failsafe());
+
+        // Point the robot toward the opposing alliance wall, then press A
         // to zero the gyro. Do this after any hot code deploy without a power cycle.
-        driver.leftBumper().onTrue(swerve.zeroHeadingCommand());
+        driver.a().onTrue(swerve.zeroHeadingCommand());
+
+        // Shoot — driver holds right trigger to aim and fire.
+        // Spinner ramps up immediately; feeder engages once shooter is at RPM.
+        driver.rightTrigger().whileTrue(RobotBehaviors.shoot());
+
+        // Feeder vomit — driver holds right bumper to unjam
+        driver.rightBumper().whileTrue(feeder.vomitCommand());
+
+        // ── Operator — mechanisms ──────────────────────────────────────────
+
+        // Arm
+        operator.x().onTrue(arm.deployCommand());
+        operator.y().onTrue(arm.retractCommand());
+
+        // Intake — right bumper runs; right trigger reverses/ejects
+        operator.rightBumper() .whileTrue(intake.runCommand());
+        operator.rightTrigger().whileTrue(intake.reverseCommand());
+
+        // Elevator — D-pad presets, bumpers for manual jogging
+        operator.povUp()      .onTrue(elevator.goToCommand(Setpoint.HIGH));
+        operator.povDown()    .onTrue(elevator.goToCommand(Setpoint.STOW));
+        operator.povLeft()    .onTrue(elevator.goToCommand(Setpoint.MID));
+        operator.povRight()   .onTrue(elevator.goToCommand(Setpoint.LOW));
+        operator.leftBumper() .whileTrue(elevator.manualUpCommand());
+        operator.leftTrigger().whileTrue(elevator.manualDownCommand());
+
+        // Stow all mechanisms to a safe travel position
+        operator.back().onTrue(RobotBehaviors.stow());
     }
 
     private void configureDefaultBindings() {

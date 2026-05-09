@@ -230,26 +230,26 @@ public final class AutoSequence {
 
 
     // =========================================================================
-    // BASIC MOTOR COMMANDS
+    // INTAKE COMMANDS
     //
-    // Free-spinning mechanism — runForward / runReverse / stop vocabulary.
+    // Roller intake — run / reverse / stop vocabulary.
     // =========================================================================
 
-    /** Runs the basic motor forward. */
-    public AutoSequence motorForward() {
-        steps.add(AutoBuilder.basicMotor.runForwardCommand());
+    /** Runs the intake roller forward. */
+    public AutoSequence intakeRun() {
+        steps.add(AutoBuilder.intake.runCommand());
         return this;
     }
 
-    /** Runs the basic motor in reverse. */
-    public AutoSequence motorReverse() {
-        steps.add(AutoBuilder.basicMotor.runReverseCommand());
+    /** Runs the intake roller in reverse. */
+    public AutoSequence intakeReverse() {
+        steps.add(AutoBuilder.intake.reverseCommand());
         return this;
     }
 
-    /** Stops the basic motor. */
-    public AutoSequence motorStop() {
-        steps.add(AutoBuilder.basicMotor.stopCommand());
+    /** Stops the intake. */
+    public AutoSequence intakeStop() {
+        steps.add(AutoBuilder.intake.stopCommand());
         return this;
     }
 

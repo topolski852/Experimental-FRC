@@ -14,12 +14,10 @@ import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Transform3d;
-import edu.wpi.first.wpilibj.DriverStation;
 import gg.questnav.questnav.PoseFrame;
 import gg.questnav.questnav.QuestNav;
 
 import org.team1507.lib.core.framework.Subsystem1507;
-import org.team1507.lib.core.logging.Telemetry;
 import org.team1507.lib.core.util.CommandBuilder;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -166,15 +164,15 @@ public final class QuestNavSubsystem extends Subsystem1507 {
 
         // ── Status callbacks ─────────────────────────────────────────────────
         questNav.onConnected(
-            () -> System.out.println("[QuestNav] Connected to headset."));
+            () -> System.out.println("[" + getName() + "] Connected to headset."));
         questNav.onDisconnected(
-            () -> DriverStation.reportWarning("[QuestNav] Headset disconnected — vision paused.", false));
+            () -> warn("Headset disconnected — vision paused."));
         questNav.onTrackingLost(
-            () -> DriverStation.reportWarning("[QuestNav] Tracking lost — check headset view.", false));
+            () -> warn("Tracking lost — check headset view."));
         questNav.onTrackingAcquired(
-            () -> System.out.println("[QuestNav] Tracking acquired."));
+            () -> System.out.println("[" + getName() + "] Tracking acquired."));
         questNav.onLowBattery(
-            20, level -> DriverStation.reportWarning("[QuestNav] Headset battery low: " + level + "%", false));
+            20, level -> warn("Headset battery low: " + level + "%"));
 
         // ── Command confirmation callbacks (QuestNavLib 2026-2.2.0) ──────────
         //
@@ -203,10 +201,10 @@ public final class QuestNavSubsystem extends Subsystem1507 {
         questNav.commandPeriodic();
 
         // ── Status telemetry ─────────────────────────────────────────────────
-        Telemetry.set("QuestNav/Connected",        questNav.isConnected());
-        Telemetry.set("QuestNav/Tracking",         questNav.isTracking());
-        Telemetry.set("QuestNav/PoseResetPending", poseResetPending);
-        questNav.getBatteryPercent().ifPresent(b -> Telemetry.set("QuestNav/Battery", (double) b));
+        log("Connected",        questNav.isConnected());
+        log("Tracking",         questNav.isTracking());
+        log("PoseResetPending", poseResetPending);
+        questNav.getBatteryPercent().ifPresent(b -> log("Battery", (double) b));
 
         // Skip vision updates if the Quest isn't reliably tracking
         if (!questNav.isConnected() || !questNav.isTracking()) return;
@@ -228,7 +226,7 @@ public final class QuestNavSubsystem extends Subsystem1507 {
                 VecBuilder.fill(STD_DEVS[0], STD_DEVS[1], STD_DEVS[2])
             );
 
-            Telemetry.set("QuestNav/Pose", robotPose2d);
+            log("Pose", robotPose2d);
         }
     }
 
@@ -262,8 +260,7 @@ public final class QuestNavSubsystem extends Subsystem1507 {
                     onReset.accept(robotPose);
                     poseResetPending   = false;
                     poseResetSucceeded = true;
-                    DriverStation.reportWarning(
-                        "[QuestNav] Not connected — swerve-only pose reset applied.", false);
+                    warn("Not connected — swerve-only pose reset applied.");
                     return;
                 }
 
@@ -271,8 +268,7 @@ public final class QuestNavSubsystem extends Subsystem1507 {
                     // Quest is connected but hasn't sent a frame yet.
                     // The command will wait — poseResetPending stays true until
                     // the Quest responds. Warn the driver so they know to wait.
-                    DriverStation.reportWarning(
-                        "[QuestNav] Waiting for first tracking frame before sending pose reset.", false);
+                    warn("Waiting for first tracking frame before sending pose reset.");
                 }
 
                 poseResetPending   = true;
@@ -293,20 +289,17 @@ public final class QuestNavSubsystem extends Subsystem1507 {
                     // partially-accepted command from leaving Quest and odometry
                     // in different states.
                     onReset.accept(robotPose);
-                    System.out.printf(
-                        "[QuestNav] Pose locked → x=%.2f m, y=%.2f m, heading=%.1f°%n",
-                        robotPose.getX(), robotPose.getY(),
+                    System.out.printf("[%s] Pose locked → x=%.2f m, y=%.2f m, heading=%.1f°%n",
+                        getName(), robotPose.getX(), robotPose.getY(),
                         robotPose.getRotation().getDegrees());
-                    Telemetry.set("QuestNav/LastPoseReset", robotPose);
+                    log("LastPoseReset", robotPose);
 
                 } else if (timedOut) {
-                    DriverStation.reportWarning(
-                        "[QuestNav] Pose reset timed out — Quest may not be tracking yet. "
-                        + "Check headset connection and tracking state.", false);
+                    warn("Pose reset timed out — Quest may not be tracking yet. "
+                        + "Check headset connection and tracking state.");
 
                 } else if (interrupted) {
-                    DriverStation.reportWarning(
-                        "[QuestNav] Pose reset interrupted before Quest confirmed.", false);
+                    warn("Pose reset interrupted before Quest confirmed.");
                 }
             })
             .timeout(SET_POSE_TIMEOUT_SECONDS)
@@ -328,15 +321,13 @@ public final class QuestNavSubsystem extends Subsystem1507 {
             .named("QuestNav.resetFromQuest")
             .onInitialize(() -> {
                 if (!questNav.isConnected()) {
-                    DriverStation.reportWarning(
-                        "[QuestNav] Cannot reset pose — Quest not connected.", false);
+                    warn("Cannot reset pose — Quest not connected.");
                     return;
                 }
 
                 PoseFrame[] frames = questNav.getAllUnreadPoseFrames();
                 if (frames.length == 0) {
-                    DriverStation.reportWarning(
-                        "[QuestNav] Cannot reset pose — no frame data available.", false);
+                    warn("Cannot reset pose — no frame data available.");
                     return;
                 }
 
@@ -350,9 +341,8 @@ public final class QuestNavSubsystem extends Subsystem1507 {
                 // Using the raw questPose3d directly avoids a double-transform.
                 questNav.setPose(latest.questPose3d());
 
-                System.out.printf(
-                    "[QuestNav] Pose reset from Quest → x=%.2f m, y=%.2f m, heading=%.1f°%n",
-                    robotPose2d.getX(), robotPose2d.getY(),
+                System.out.printf("[%s] Pose reset from Quest → x=%.2f m, y=%.2f m, heading=%.1f°%n",
+                    getName(), robotPose2d.getX(), robotPose2d.getY(),
                     robotPose2d.getRotation().getDegrees());
             })
             .isFinished(true);

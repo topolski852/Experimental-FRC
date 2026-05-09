@@ -17,7 +17,6 @@ import java.util.function.DoubleSupplier;
 
 import org.team1507.lib.core.framework.Subsystem1507;
 import org.team1507.lib.core.impl.ctre.Motor1507;
-import org.team1507.lib.core.logging.Telemetry;
 import org.team1507.lib.core.util.CommandBuilder;
 
 import static org.team1507.robot.Constants.kArmMotor.*;
@@ -61,14 +60,14 @@ public final class ArmSystem extends Subsystem1507 {
         super("Arm");
 
         motorA = new Motor1507(
-            "ArmA",
+            key("MotorA"),
             Motor1507.Type.FX,
             21,
             CONFIG_A
         );
 
         motorB = new Motor1507(
-            "ArmB",
+            key("MotorB"),
             Motor1507.Type.FX,
             22,
             CONFIG_B
@@ -85,9 +84,9 @@ public final class ArmSystem extends Subsystem1507 {
     public void periodic() {
         BaseStatusSignal.refreshAll(armSignals);
 
-        Telemetry.set("Arm/AngleDegrees", getCurrentAngle());
-        Telemetry.set("Arm/TargetDegrees", getTargetAngle());
-        Telemetry.set("Arm/Stalled", isStalled());
+        log("AngleDegrees", getCurrentAngle());
+        log("TargetDegrees", getTargetAngle());
+        log("Stalled", isStalled());
     }
 
     // ============================================================
@@ -198,6 +197,19 @@ public final class ArmSystem extends Subsystem1507 {
         return motorA.isStalled() || motorB.isStalled();
     }
 
+    /**
+     * Returns whether the arm is within {@code ANGLE_TOLERANCE_DEGREES} of its target.
+     *
+     * <p>Used as the {@code isFinished} condition for position commands so they
+     * end naturally when the arm arrives, without waiting to be cancelled by
+     * another command.
+     *
+     * @return true if the arm is at its target angle
+     */
+    public boolean isAtTarget() {
+        return Math.abs(getCurrentAngle() - targetAngleDeg) < ANGLE_TOLERANCE_DEGREES;
+    }
+
     // ============================================================
     // UTIL
     // ============================================================
@@ -219,44 +231,63 @@ public final class ArmSystem extends Subsystem1507 {
     // ============================================================
 
     /**
-     * Creates a command that deploys the arm and finishes if stalled.
+     * Deploys the arm and finishes when it arrives at the deployed angle.
+     *
+     * <p>The command ends naturally via {@link #isAtTarget()} so the subsystem
+     * is released immediately on arrival — no need to press another button to
+     * cancel it. The TalonFX holds position via its persistent control request
+     * after the command ends, so the arm stays up without active motor output.
+     *
+     * <p>Only calls {@link #stop()} if the command is interrupted or stalled;
+     * a natural finish leaves the motor holding position.
      */
     public Command deployCommand() {
         return new CommandBuilder(this)
             .named("Arm.deploy")
             .onInitialize(this::deploy)
+            .isFinished(this::isAtTarget)
             .stallFinish(this::isStalled)
-            .onEnd((interrupted, timedOut, stalled) -> stop())
-            .runsUntilInterrupted();
+            .onEnd((interrupted, timedOut, stalled) -> {
+                if (interrupted || timedOut || stalled) stop();
+                // Natural completion: TalonFX keeps holding the target position
+            });
     }
 
     /**
-     * Creates a command that retracts the arm and finishes if stalled.
+     * Retracts the arm and finishes when it arrives at the retracted angle.
+     *
+     * <p>Same completion behavior as {@link #deployCommand()}.
      */
     public Command retractCommand() {
         return new CommandBuilder(this)
             .named("Arm.retract")
             .onInitialize(this::retract)
+            .isFinished(this::isAtTarget)
             .stallFinish(this::isStalled)
-            .onEnd((interrupted, timedOut, stalled) -> stop())
-            .runsUntilInterrupted();
+            .onEnd((interrupted, timedOut, stalled) -> {
+                if (interrupted || timedOut || stalled) stop();
+            });
     }
 
     /**
-     * Creates a command that drives the arm manually using a joystick input.
+     * Drives the arm to a named position and finishes when it arrives.
+     *
+     * <p>Same completion behavior as {@link #deployCommand()}.
      */
     public Command goToCommand(Position position) {
         return new CommandBuilder(this)
             .named("Arm.goTo")
-            .onExecute(() -> {
-                if(position == Position.LOW) setAngle(RETRACTED_ANGLE_DEGREES);
-                if(position == Position.MID) setAngle(DEPLOYED_ANGLE_DEGREES);
-                if(position == Position.HIGH) setAngle(DEPLOYED_ANGLE_DEGREES);
-                if(position == Position.STOW) setAngle(RETRACTED_ANGLE_DEGREES);
+            .onInitialize(() -> {
+                switch (position) {
+                    case LOW,  STOW -> setAngle(RETRACTED_ANGLE_DEGREES);
+                    case MID, HIGH  -> setAngle(DEPLOYED_ANGLE_DEGREES);
+                }
             })
+            .isFinished(this::isAtTarget)
             .stallFinish(this::isStalled)
-            .onEnd((interrupted, timedOut, stalled) -> stop())
-            .runsUntilInterrupted();
+            .onEnd((interrupted, timedOut, stalled) -> {
+                if (interrupted || timedOut || stalled) stop();
+            });
     }
 
     /**

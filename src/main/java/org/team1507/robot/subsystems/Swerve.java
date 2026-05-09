@@ -24,7 +24,6 @@ import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.Rotations;
@@ -35,6 +34,7 @@ import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.Pigeon2;
 
+import org.team1507.lib.core.framework.Subsystem1507;
 import org.team1507.lib.core.impl.ctre.Motor1507;
 import org.team1507.lib.core.logging.Telemetry;
 import org.team1507.lib.core.swerve.SwerveModule1507;
@@ -43,7 +43,7 @@ import org.team1507.robot.Constants.RobotMap;
 import org.team1507.robot.Constants.kSwerve;
 import static org.team1507.robot.Constants.kSwerve.kTunning.*;
 
-public final class Swerve extends SubsystemBase {
+public final class Swerve extends Subsystem1507 {
 
     // ------------------------------------------------------------
     // Modules
@@ -104,38 +104,39 @@ public final class Swerve extends SubsystemBase {
     // ============================================================
 
     public Swerve() {
+        super("Swerve");
         MathConfig math = new MathConfig(
             kSwerve.DRIVE_GEAR_RATIO, kSwerve.STEER_GEAR_RATIO,
             kSwerve.COUPLE_RATIO, kSwerve.WHEEL_RADIUS_METERS
         );
 
         this.frontLeft = new SwerveModule1507("FrontLeft",
-            new Motor1507("FL_Drive", Motor1507.Type.FX, RobotMap.FL_DRIVE, kSwerve.FRONT_LEFT_DRIVE_CONFIG),
-            new Motor1507("FL_Steer", Motor1507.Type.FX, RobotMap.FL_STEER, kSwerve.FRONT_LEFT_STEER_CONFIG),
+            new Motor1507("Swerve/FrontLeft/Drive", Motor1507.Type.FX, RobotMap.FL_DRIVE, kSwerve.FRONT_LEFT_DRIVE_CONFIG),
+            new Motor1507("Swerve/FrontLeft/Steer", Motor1507.Type.FX, RobotMap.FL_STEER, kSwerve.FRONT_LEFT_STEER_CONFIG),
             new CANcoder(RobotMap.FL_ENCODER),
             new Rotation2d(Rotations.of(RobotMap.FL_ENCODER_OFFSET)),
             math, kSwerve.DRIVE_METERS_SCALE
         );
 
         this.frontRight = new SwerveModule1507("FrontRight",
-            new Motor1507("FR_Drive", Motor1507.Type.FX, RobotMap.FR_DRIVE, kSwerve.FRONT_RIGHT_DRIVE_CONFIG),
-            new Motor1507("FR_Steer", Motor1507.Type.FX, RobotMap.FR_STEER, kSwerve.FRONT_RIGHT_STEER_CONFIG),
+            new Motor1507("Swerve/FrontRight/Drive", Motor1507.Type.FX, RobotMap.FR_DRIVE, kSwerve.FRONT_RIGHT_DRIVE_CONFIG),
+            new Motor1507("Swerve/FrontRight/Steer", Motor1507.Type.FX, RobotMap.FR_STEER, kSwerve.FRONT_RIGHT_STEER_CONFIG),
             new CANcoder(RobotMap.FR_ENCODER),
             new Rotation2d(Rotations.of(RobotMap.FR_ENCODER_OFFSET)),
             math, kSwerve.DRIVE_METERS_SCALE
         );
 
         this.backLeft = new SwerveModule1507("BackLeft",
-            new Motor1507("BL_Drive", Motor1507.Type.FX, RobotMap.BL_DRIVE, kSwerve.BACK_LEFT_DRIVE_CONFIG),
-            new Motor1507("BL_Steer", Motor1507.Type.FX, RobotMap.BL_STEER, kSwerve.BACK_LEFT_STEER_CONFIG),
+            new Motor1507("Swerve/BackLeft/Drive", Motor1507.Type.FX, RobotMap.BL_DRIVE, kSwerve.BACK_LEFT_DRIVE_CONFIG),
+            new Motor1507("Swerve/BackLeft/Steer", Motor1507.Type.FX, RobotMap.BL_STEER, kSwerve.BACK_LEFT_STEER_CONFIG),
             new CANcoder(RobotMap.BL_ENCODER),
             new Rotation2d(Rotations.of(RobotMap.BL_ENCODER_OFFSET)),
             math, kSwerve.DRIVE_METERS_SCALE
         );
 
         this.backRight = new SwerveModule1507("BackRight",
-            new Motor1507("BR_Drive", Motor1507.Type.FX, RobotMap.BR_DRIVE, kSwerve.BACK_RIGHT_DRIVE_CONFIG),
-            new Motor1507("BR_Steer", Motor1507.Type.FX, RobotMap.BR_STEER, kSwerve.BACK_RIGHT_STEER_CONFIG),
+            new Motor1507("Swerve/BackRight/Drive", Motor1507.Type.FX, RobotMap.BR_DRIVE, kSwerve.BACK_RIGHT_DRIVE_CONFIG),
+            new Motor1507("Swerve/BackRight/Steer", Motor1507.Type.FX, RobotMap.BR_STEER, kSwerve.BACK_RIGHT_STEER_CONFIG),
             new CANcoder(RobotMap.BR_ENCODER),
             new Rotation2d(Rotations.of(RobotMap.BR_ENCODER_OFFSET)),
             math, kSwerve.DRIVE_METERS_SCALE
@@ -202,10 +203,10 @@ public final class Swerve extends SubsystemBase {
             getModulePositions()
         );
 
-        Telemetry.set("Swerve", pose);
-        Telemetry.set("Swerve/DriveStalled", isAnyDriveStalled());
-        Telemetry.set("Swerve/SteerStalled", isAnySteerStalled());
-        Telemetry.set("ModuleStates", getModuleStates());
+        log("Pose", pose);
+        log("DriveStalled", isAnyDriveStalled());
+        log("SteerStalled", isAnySteerStalled());
+        Telemetry.set("Swerve/ModuleStates", getModuleStates());
     }
 
     @Override

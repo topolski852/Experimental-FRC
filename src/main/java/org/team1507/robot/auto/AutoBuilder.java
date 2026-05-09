@@ -2,15 +2,18 @@
 //  ██║    ██║██╔══██╗██╔══██╗██║     ██╔═══██╗██╔════╝██║ ██╔╝██╔════╝
 //  ██║ █╗ ██║███████║██████╔╝██║     ██║   ██║██║     █████╔╝ ███████╗
 //  ██║███╗██║██╔══██║██╔══██╗██║     ██║   ██║██║     ██╔═██╗ ╚════██║
-//  ╚███╔███╔╝██║  ██║██║  ██║███████╗╚██████╔╝╚██████╗██║  ██╗███████║
+//  ╚███╔███╔╝██║  ██║██║  ██║███████╗╚██████╔╝╚██████╔╝╚██║  ██╗███████║
 //   ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚══════╝
 //                           TEAM 1507 WARLOCKS
 
 package org.team1507.robot.auto;
 
-import org.team1507.robot.subsystems.Swerve;
 import org.team1507.robot.subsystems.ArmSystem;
-import org.team1507.robot.subsystems.BasicMotor;
+import org.team1507.robot.subsystems.Elevator;
+import org.team1507.robot.subsystems.Feeder;
+import org.team1507.robot.subsystems.Intake;
+import org.team1507.robot.subsystems.Shooter;
+import org.team1507.robot.subsystems.Swerve;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AutoBuilder
@@ -21,7 +24,7 @@ import org.team1507.robot.subsystems.BasicMotor;
 //
 // HOW TO ADD A NEW SUBSYSTEM EACH YEAR:
 //   1. Import your subsystem at the top of this file.
-//   2. Add a private static field for it below the existing fields.
+//   2. Add a public static field for it below the existing fields.
 //   3. Add it as a parameter to init() and assign it.
 //   4. Add your command factory methods in the appropriate section below.
 //   5. Call AutoBuilder.init(...) in Robot.java with the new subsystem.
@@ -34,14 +37,14 @@ public final class AutoBuilder {
     // Subsystem Registry
     // -------------------------------------------------------------------------
 
-    public static Swerve swerve;
+    public static Swerve    swerve;
     public static ArmSystem arm;
-    public static BasicMotor basicMotor;
+    public static Elevator  elevator;
+    public static Shooter   shooter;
+    public static Feeder    feeder;
+    public static Intake    intake;
 
-    // ADD NEW SUBSYSTEMS HERE each year:
-    // private static Shooter shooter;
-    // private static Intake intake;
-    // private static Elevator elevator;
+    // ADD NEW SUBSYSTEMS HERE each year (e.g. climber, indexer, turret).
 
     // -------------------------------------------------------------------------
     // Initialization
@@ -51,18 +54,19 @@ public final class AutoBuilder {
     // -------------------------------------------------------------------------
 
     public static void init(
-        Swerve swerve,
+        Swerve    swerve,
         ArmSystem arm,
-        BasicMotor basicMotor
-        // Add new subsystems here each year:
-        // Shooter shooter,
-        // Intake intake,
+        Elevator  elevator,
+        Shooter   shooter,
+        Feeder    feeder,
+        Intake    intake
     ) {
-        AutoBuilder.swerve      = swerve;
-        AutoBuilder.arm         = arm;
-        AutoBuilder.basicMotor  = basicMotor;
-        // AutoBuilder.shooter  = shooter;
-        // AutoBuilder.intake   = intake;
+        AutoBuilder.swerve    = swerve;
+        AutoBuilder.arm       = arm;
+        AutoBuilder.elevator  = elevator;
+        AutoBuilder.shooter   = shooter;
+        AutoBuilder.feeder    = feeder;
+        AutoBuilder.intake    = intake;
     }
 
     // Prevent instantiation — this is a static utility class.

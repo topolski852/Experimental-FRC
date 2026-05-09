@@ -2,16 +2,20 @@
 //  ██║    ██║██╔══██╗██╔══██╗██║     ██╔═══██╗██╔════╝██║ ██╔╝██╔════╝
 //  ██║ █╗ ██║███████║██████╔╝██║     ██║   ██║██║     █████╔╝ ███████╗
 //  ██║███╗██║██╔══██║██╔══██╗██║     ██║   ██║██║     ██╔═██╗ ╚════██║
-//  ╚███╔███╔╝██║  ██║██║  ██║███████╗╚██████╔╝╚██████╗██║  ██╗███████║
+//  ╚███╔███╔╝██║  ██║██║  ██║███████╗╚██████╔╝╚██████╔╝╚██║  ██╗███████║
 //   ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚══════╝
 //                           TEAM 1507 WARLOCKS
 
 package org.team1507.robot;
 
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 
 import org.team1507.robot.auto.AutoBuilder;
+import org.team1507.robot.subsystems.Elevator.Setpoint;
+
+import static org.team1507.robot.Constants.kShooter.*;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // RobotBehaviors
@@ -27,31 +31,31 @@ import org.team1507.robot.auto.AutoBuilder;
 //
 // HOW TELEOP USES THIS:
 //   In Robot.java:
-//     driver.a().whileTrue(RobotBehaviors.scoreHigh());
-//     driver.b().onTrue(RobotBehaviors.intakePiece());
+//     operator.rightTrigger().whileTrue(RobotBehaviors.shoot());
+//     driver.a().onTrue(RobotBehaviors.scoreHigh());
 //
 // HOW AUTO USES THIS:
 //   In AutoSequence.java (add a one-line wrapper):
-//     public AutoSequence scoreHigh() {
-//         steps.add(RobotBehaviors.scoreHigh());
+//     public AutoSequence shoot() {
+//         steps.add(RobotBehaviors.shoot());
 //         return this;
 //     }
 //   Then in a routine:
-//     new AutoSequence().scoreHigh().driveFieldRelative(...).build();
+//     new AutoSequence().shoot().driveFieldRelative(...).build();
 //
 // HOW TO ADD A NEW BEHAVIOR:
 //   1. Identify which subsystems are involved.
 //   2. Write a static method here that composes their individual commands.
 //   3. Use Commands.sequence() for ordered steps.
 //      Use Commands.parallel() for simultaneous actions.
-//      Use Commands.deadline() when one action sets the duration.
+//      Use Commands.waitUntil() to gate one action on another subsystem's state.
 //   4. Add a wrapper in AutoSequence.java if it's needed in auto routines.
 //   5. Bind it in Robot.java if it's a driver control.
 //
 // NAMING CONVENTION:
 //   Name behaviors by what the robot DOES, not what the mechanism is.
-//   GOOD:  scoreHigh(), intakePiece(), ejectPiece()
-//   AVOID: armHighAndMotorForward(), deployArmRunMotor()
+//   GOOD:  shoot(), scoreHigh(), intakePiece(), ejectPiece()
+//   AVOID: armHighAndIntakeForward(), deployArmRunRoller()
 // ─────────────────────────────────────────────────────────────────────────────
 public final class RobotBehaviors {
 
@@ -59,56 +63,76 @@ public final class RobotBehaviors {
     private RobotBehaviors() {}
 
     // ─────────────────────────────────────────────────────────────────
-    // EXAMPLE BEHAVIORS — replace these with your game-specific actions.
-    //
-    // These examples use the generic arm and motor from Robot.java.
-    // Once you build real subsystems (intake, shooter, climber, etc.),
-    // delete these examples and write new behaviors for your game.
+    // SHOOTING BEHAVIORS
     // ─────────────────────────────────────────────────────────────────
 
     /**
-     * Scores a game piece at the high goal.
+     * Spins up the shooter and feeds a game piece once at speed.
      *
-     * <p>Step-by-step:
+     * <p>How it works:
      * <ol>
-     *   <li>Deploy the arm to the high scoring position.</li>
-     *   <li>Once the arm is ready, run the motor forward to release the piece.</li>
-     *   <li>After 0.5 seconds the motor stops and the arm stays up.</li>
+     *   <li>The shooter motor spins up to {@code DEFAULT_RPM} immediately.</li>
+     *   <li>The feeder waits (via {@link Commands#waitUntil}) until
+     *       {@code shooter.isAtRPM()} returns true.</li>
+     *   <li>Once the shooter is at speed, the feeder starts and feeds
+     *       the piece into the flywheel.</li>
+     *   <li>When the driver releases the trigger, both motors stop.</li>
      * </ol>
      *
-     * <p>Use on a driver button: {@code driver.a().onTrue(RobotBehaviors.scoreHigh());}
+     * <p>This shows the core multi-subsystem coordination pattern: neither
+     * the Shooter nor the Feeder knows about each other — the behavior here
+     * connects them using {@link Commands#parallel} and {@link Commands#waitUntil}.
+     *
+     * <p>Binding: {@code operator.rightTrigger().whileTrue(RobotBehaviors.shoot());}
      */
-    public static Command scoreHigh() {
-        return Commands.sequence(
-            AutoBuilder.arm.deployCommand(),
-            Commands.waitSeconds(0.1),          // brief pause for arm to settle
-            AutoBuilder.basicMotor.runForwardCommand().withTimeout(0.5)
-        ).withName("RobotBehaviors.scoreHigh");
+    public static Command shoot() {
+        return Commands.parallel(
+            // Shooter: spin up and hold speed for the full duration of the button hold
+            AutoBuilder.shooter.spinUpCommand(DEFAULT_RPM),
+
+            // Feeder: wait until shooter is ready, then feed
+            Commands.sequence(
+                Commands.waitUntil(AutoBuilder.shooter::isAtRPM),
+                AutoBuilder.feeder.feedCommand()
+            )
+        ).withName("RobotBehaviors.shoot");
     }
 
-    /**
-     * Scores a game piece at the mid goal (arm at retracted position).
-     *
-     * <p>Same as scoreHigh but with the arm in the retracted/mid position.
-     *
-     * <p>Use on a driver button: {@code driver.b().onTrue(RobotBehaviors.scoreMid());}
-     */
-    public static Command scoreMid() {
-        return Commands.sequence(
-            AutoBuilder.arm.retractCommand(),
-            Commands.waitSeconds(0.1),
-            AutoBuilder.basicMotor.runForwardCommand().withTimeout(0.5)
-        ).withName("RobotBehaviors.scoreMid");
-    }
+    // ─────────────────────────────────────────────────────────────────
+    // FAILSAFE
+    // ─────────────────────────────────────────────────────────────────
 
     /**
-     * Runs the intake motor in reverse to eject a game piece.
+     * Cancels every running command immediately.
+     *
+     * <p>Use when a mechanism appears stuck or unresponsive. All commands are
+     * cancelled on the spot; subsystem default commands (e.g. the swerve drive)
+     * are automatically rescheduled by the scheduler on the next cycle, so
+     * driving is restored within one loop.
+     *
+     * <p>Works while disabled ({@code ignoringDisable(true)}) so operators can
+     * clear a stuck state before enabling.
+     *
+     * <p>Binding: {@code driver.back().onTrue(RobotBehaviors.failsafe());}
+     */
+    public static Command failsafe() {
+        return Commands.runOnce(CommandScheduler.getInstance()::cancelAll)
+            .withName("Failsafe.cancelAll")
+            .ignoringDisable(true);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // UTILITY BEHAVIORS
+    // ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Runs the intake in reverse to eject a game piece.
      *
      * <p>This runs continuously while the button is held (use whileTrue):
      * {@code driver.x().whileTrue(RobotBehaviors.ejectPiece());}
      */
     public static Command ejectPiece() {
-        return AutoBuilder.basicMotor.runReverseCommand()
+        return AutoBuilder.intake.reverseCommand()
             .withName("RobotBehaviors.ejectPiece");
     }
 
@@ -121,8 +145,11 @@ public final class RobotBehaviors {
      */
     public static Command stow() {
         return Commands.sequence(
-            AutoBuilder.basicMotor.stopCommand(),
-            AutoBuilder.arm.retractCommand()
+            AutoBuilder.intake.stopCommand(),
+            Commands.parallel(
+                AutoBuilder.arm.retractCommand(),
+                AutoBuilder.elevator.goToCommand(Setpoint.STOW)
+            )
         ).withName("RobotBehaviors.stow");
     }
 }

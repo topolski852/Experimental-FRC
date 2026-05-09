@@ -78,6 +78,14 @@ public class Constants {
         // Gyro
         public static final int PIGEON2 = 30;
 
+        // Example mechanisms — reassign per robot each year
+        public static final int ARM_A    = 21;
+        public static final int ARM_B    = 22;
+        public static final int ELEVATOR = 40;
+        public static final int SHOOTER  = 41;
+        public static final int FEEDER   = 42;
+        public static final int INTAKE   = 43;
+
         // Driver Station USB ports
         public static final int DRIVER_CONTROLLER   = 0;
         public static final int OPERATOR_CONTROLLER = 1;
@@ -247,21 +255,120 @@ public class Constants {
     }
 
     // ============================================================
-    // Basic Motor — intake/roller mechanism.
+    // Elevator — single-motor linear elevator with state machine.
     // ============================================================
 
-    public static final class kBasicMotor {
+    public static final class kElevator {
+
+        public static final int MOTOR_CAN_ID = RobotMap.ELEVATOR;
+
+        // Named setpoints in inches — tune to your robot's geometry
+        public static final double STOW_INCHES = 0.0;
+        public static final double LOW_INCHES  = 12.0;
+        public static final double MID_INCHES  = 24.0;
+        public static final double HIGH_INCHES = 48.0;
+
+        /** How close the elevator must be to consider the setpoint reached (inches). */
+        public static final double TOLERANCE_INCHES = 0.5;
+
+        /**
+         * Inches of carriage travel per motor shaft rotation.
+         * Depends on your spool diameter and gear ratio — measure and update.
+         */
+        public static final double INCHES_PER_ROTATION = 1.5;
+
+        /**
+         * Constant feedforward voltage applied to counteract gravity (volts).
+         * Increase until the elevator holds position without drifting down.
+         */
+        public static final double GRAVITY_FF_VOLTS = 0.3;
+
+        /** Maximum duty cycle for manual jogging. Keep low for safety. */
+        public static final double MANUAL_DUTY = 0.3;
+
+        public static final MotorConfig CONFIG =
+            MotorConfig.builder(ControlMode.POSITION)
+                .inverted(false)
+                .withPID(5.0, 0.0, 0.0)
+                .withVoltageLimits(8, -8)
+                .withStatorCurrentLimit(Amps.of(60.0))
+                .withStallCurrentThreshold(80.0)
+                .withStallVelocityThreshold(kStall.VELOCITY_THRESHOLD / 360.0)
+                .withStallTime(kStall.TIME_SEC)
+                .withSimVelocityRps(2.0)
+                .withBrake()
+                .build();
+    }
+
+    // ============================================================
+    // Shooter — single-motor flywheel.
+    // ============================================================
+
+    public static final class kShooter {
+
+        public static final int MOTOR_CAN_ID = RobotMap.SHOOTER;
+
+        /** Default shooting speed in RPM. */
+        public static final double DEFAULT_RPM = 3000.0;
+
+        /**
+         * How close the flywheel must be to target RPM before the feeder
+         * is allowed to run. Wider = faster but less consistent shots.
+         */
+        public static final double RPM_TOLERANCE = 100.0;
+
+        public static final MotorConfig CONFIG =
+            MotorConfig.builder(ControlMode.VELOCITY)
+                .inverted(false)
+                .withPID(0.5, 0.0, 0.0)
+                .withFeedforward(0.0, 0.12, 0.0)
+                .withStatorCurrentLimit(Amps.of(80.0))
+                .withSimVelocityRps(50.0)
+                .build();
+    }
+
+    // ============================================================
+    // Feeder — single-motor ball feeder.
+    // ============================================================
+
+    public static final class kFeeder {
+
+        public static final int MOTOR_CAN_ID = RobotMap.FEEDER;
+
+        /** Feeding speed in RPM (positive = toward shooter). */
+        public static final double FEED_RPM  =  500.0;
+
+        /** Reverse speed in RPM for ejecting jammed pieces. */
+        public static final double VOMIT_RPM = -250.0;
+
+        public static final MotorConfig CONFIG =
+            MotorConfig.builder(ControlMode.VELOCITY)
+                .inverted(false)
+                .withPID(0.5, 0.0, 0.0)
+                .withFeedforward(0.0, 0.12, 0.0)
+                .withStatorCurrentLimit(Amps.of(60.0))
+                .withSimVelocityRps(8.33)
+                .build();
+    }
+
+    // ============================================================
+    // Intake — single-motor duty-cycle roller intake.
+    // ============================================================
+
+    public static final class kIntake {
+
+        public static final int MOTOR_CAN_ID = RobotMap.INTAKE;
+
+        public static final double DUTY_INTAKE  =  0.8;
+        public static final double DUTY_REVERSE = -0.5;
 
         public static final MotorConfig CONFIG =
             MotorConfig.builder()
-                .inverted(true)
-                .withVoltageLimits(3.5, -3.5)
-                .withStatorCurrentLimit(Amps.of(80))
+                .inverted(false)
+                .withVoltageLimits(8, -8)
+                .withStatorCurrentLimit(Amps.of(60.0))
                 .withSimVelocityRps(50.0)
                 .build();
-
-        public static final double DUTY_FORWARD =  0.7;
-        public static final double DUTY_REVERSE = -0.3;
     }
 
     // ============================================================
@@ -274,6 +381,9 @@ public class Constants {
         public static final double MIN_ANGLE_DEGREES       =   0.0;
         public static final double DEPLOYED_ANGLE_DEGREES  = 138.0;
         public static final double RETRACTED_ANGLE_DEGREES =  82.0;
+
+        /** How close the arm must be to consider its target reached (degrees). */
+        public static final double ANGLE_TOLERANCE_DEGREES =   2.0;
 
         public static final double MANUAL_POSITIVE_POWER =  0.4;
         public static final double MANUAL_NEGATIVE_POWER = -0.4;
@@ -291,7 +401,7 @@ public class Constants {
                 .withStallCurrentThreshold(100.0)
                 .withStallVelocityThreshold(kStall.VELOCITY_THRESHOLD / 360.0)
                 .withStallTime(kStall.TIME_SEC)
-                .withSimVelocityRps(0.0833)
+                .withSimVelocityRps(0.1)
                 .withBrake()
                 .build();
 
@@ -308,7 +418,7 @@ public class Constants {
                 .withStallCurrentThreshold(100.0)
                 .withStallVelocityThreshold(kStall.VELOCITY_THRESHOLD / 360.0)
                 .withStallTime(kStall.TIME_SEC)
-                .withSimVelocityRps(0.0833)
+                .withSimVelocityRps(0.1)
                 .withBrake()
                 .build();
     }

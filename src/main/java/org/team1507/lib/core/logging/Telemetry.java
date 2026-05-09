@@ -9,7 +9,6 @@
 package org.team1507.lib.core.logging;
 
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.wpilibj.Timer;
@@ -113,6 +112,21 @@ public final class Telemetry {
     }
 
     /**
+     * Writes a string telemetry value immediately.
+     *
+     * <p>Intended for state machine states and other named status values
+     * that should appear in logs as they change.
+     *
+     * @param key   NetworkTables key
+     * @param value string value to publish
+     */
+    public static void set(String key, String value) {
+        NetworkTableInstance.getDefault()
+            .getEntry(key)
+            .setString(value);
+    }
+
+    /**
      * Writes a numeric telemetry value immediately.
      *
      * <p>This is intended for timestamps, durations, and other one‑shot numeric
@@ -138,8 +152,9 @@ public final class Telemetry {
         StructPublisher<Pose2d> pub = posePublishers.get(key);
 
         if (pub == null) {
-            NetworkTable table = NetworkTableInstance.getDefault().getTable(key);
-            pub = table.getStructTopic("Pose2d", Pose2d.struct).publish();
+            // Publish directly at `key` — no extra "/Pose2d" sub-level is added.
+            pub = NetworkTableInstance.getDefault()
+                .getStructTopic(key, Pose2d.struct).publish();
             posePublishers.put(key, pub);
         }
 
@@ -150,8 +165,10 @@ public final class Telemetry {
         StructArrayPublisher<SwerveModuleState> pub = moduleStatePublishers.get(key);
 
         if (pub == null) {
-            NetworkTable table = NetworkTableInstance.getDefault().getTable("Swerve");
-            pub = table.getStructArrayTopic(key, SwerveModuleState.struct).publish();
+            // Use `key` as the full NT path — callers pass "Swerve/ModuleStates",
+            // not just "ModuleStates" inside a hardcoded "Swerve" table.
+            pub = NetworkTableInstance.getDefault()
+                .getStructArrayTopic(key, SwerveModuleState.struct).publish();
             moduleStatePublishers.put(key, pub);
         }
 
