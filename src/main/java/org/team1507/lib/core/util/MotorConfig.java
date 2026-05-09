@@ -54,7 +54,9 @@ public record MotorConfig(
         double stallTimeSeconds,
 
         boolean brakeMode,
-        boolean continuousWrap
+        boolean continuousWrap,
+
+        double simVelocityRps
 ) {
 
     public static enum ControlMode { DUTY_CYCLE, VELOCITY, POSITION, MOTION_MAGIC }
@@ -121,6 +123,8 @@ public record MotorConfig(
         private boolean brakeMode = false;
 
         private boolean continuousWrap = false;
+
+        private double simVelocityRps = 0.0;
 
         // ============================
         // Builder Methods
@@ -244,6 +248,18 @@ public record MotorConfig(
             return this;
         }
 
+        /**
+         * Configures the simulation slew rate for position-controlled motors.
+         * The motor's simulated position will move toward its target at this speed
+         * (rotations per second) instead of jumping instantly.
+         *
+         * @param rps rotations per second (e.g. 0.0833 ≈ 30°/sec with a 1:1 ratio)
+         */
+        public Builder withSimVelocityRps(double rps) {
+            this.simVelocityRps = rps;
+            return this;
+        }
+
         // ============================
         // Build
         // ============================
@@ -284,7 +300,9 @@ public record MotorConfig(
 
                 brakeMode,
 
-                continuousWrap
+                continuousWrap,
+
+                simVelocityRps
             );
         }
     }

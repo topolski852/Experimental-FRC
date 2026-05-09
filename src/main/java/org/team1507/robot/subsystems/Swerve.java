@@ -86,6 +86,7 @@ public final class Swerve extends SubsystemBase {
     // ------------------------------------------------------------
 
     private double simHeadingRadians = 0.0;
+    private ChassisSpeeds lastCommandedSpeeds = new ChassisSpeeds();
 
     // ============================================================
     // Constructor
@@ -150,8 +151,9 @@ public final class Swerve extends SubsystemBase {
     @Override
     public void periodic() {
         if (RobotBase.isSimulation()) {
-            // Refresh yaw signal so getHeading() picks up sim state writes
-            BaseStatusSignal.refreshAll(yaw);
+            // Integrate heading before poseEstimator.update() so the heading is fresh.
+            // getHeading() reads simHeadingRadians directly in sim — no Pigeon signal needed.
+            simHeadingRadians += lastCommandedSpeeds.omegaRadiansPerSecond * 0.02;
         } else {
             frontLeft.refreshSignals();
             frontRight.refreshSignals();
@@ -177,17 +179,6 @@ public final class Swerve extends SubsystemBase {
         frontRight.simulationUpdate(0.02);
         backLeft.simulationUpdate(0.02);
         backRight.simulationUpdate(0.02);
-
-        ChassisSpeeds speeds = kinematics.toChassisSpeeds(getModuleStates());
-
-        // ADD THIS temporarily
-        Telemetry.set("Swerve/Sim/OmegaRadsPerSec", speeds.omegaRadiansPerSecond);
-        Telemetry.set("Swerve/Sim/VxMps", speeds.vxMetersPerSecond);
-        Telemetry.set("Swerve/Sim/VyMps", speeds.vyMetersPerSecond);
-        Telemetry.set("Swerve/Sim/HeadingDeg", Math.toDegrees(simHeadingRadians));
-
-        simHeadingRadians += speeds.omegaRadiansPerSecond * 0.02;
-        pigeon.getSimState().setRawYaw(simHeadingRadians * 180.0 / Math.PI);
     }
 
     // ============================================================
@@ -202,6 +193,7 @@ public final class Swerve extends SubsystemBase {
      * The kinematics layer converts these to individual module states.
      */
     public void drive(ChassisSpeeds speeds) {
+        lastCommandedSpeeds = speeds;
         SwerveModuleState[] states = kinematics.toSwerveModuleStates(speeds);
         SwerveDriveKinematics.desaturateWheelSpeeds(states, maxSpeedMetersPerSecond);
 
@@ -216,6 +208,7 @@ public final class Swerve extends SubsystemBase {
      * Used by movement commands that already handle the field→robot conversion.
      */
     public void driveRobotRelative(ChassisSpeeds speeds) {
+        lastCommandedSpeeds = speeds;
         SwerveModuleState[] states = kinematics.toSwerveModuleStates(speeds);
         SwerveDriveKinematics.desaturateWheelSpeeds(states, maxSpeedMetersPerSecond);
 
@@ -227,6 +220,7 @@ public final class Swerve extends SubsystemBase {
 
     /** Stops all modules immediately. */
     public void stop() {
+        lastCommandedSpeeds = new ChassisSpeeds();
         frontLeft.stop();
         frontRight.stop();
         backLeft.stop();
@@ -254,9 +248,10 @@ public final class Swerve extends SubsystemBase {
     }
 
     public Rotation2d getHeading() {
-        return Rotation2d.fromDegrees(
-            yaw.getValue().in(Degrees)
-        );
+        if (RobotBase.isSimulation()) {
+            return Rotation2d.fromRadians(simHeadingRadians);
+        }
+        return Rotation2d.fromDegrees(yaw.getValue().in(Degrees));
     }
 
     public ChassisSpeeds getChassisSpeeds() {
@@ -414,6 +409,7 @@ public final class Swerve extends SubsystemBase {
      */
     public Command driveCommand(Supplier<ChassisSpeeds> speeds) {
         return run(() -> drive(speeds.get()))
+            .finallyDo(interrupted -> stop())
             .withName("Swerve.drive");
     }
 
@@ -422,6 +418,7 @@ public final class Swerve extends SubsystemBase {
      */
     public Command driveCommand(ChassisSpeeds speeds) {
         return run(() -> drive(speeds))
+            .finallyDo(interrupted -> stop())
             .withName("Swerve.driveFixed");
     }
 

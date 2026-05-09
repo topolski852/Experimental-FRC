@@ -75,6 +75,9 @@ public final class Motor1507 {
 
     private double simRotorPosition = 0.0;
     private double simRotorVelocity = 0.0;
+    private double simTargetRotations = Double.NaN;
+    private final double simVelocityRps;
+    private double simLastTimestamp = -1.0;
 
     /**
      * Creates a new motor instance and applies the provided configuration.
@@ -91,11 +94,12 @@ public final class Motor1507 {
 
         this.signals = CtreMotorSignals.fromMotor(motor);
 
-        // Extract stall thresholds from slot 0 config
+        // Extract stall thresholds and sim config from slot 0
         MotorConfig base = configs[0];
         this.stallCurrentThreshold = base.stallCurrentThreshold();
         this.stallVelocityThreshold = base.stallVelocityThreshold();
         this.stallTimeSeconds = base.stallTimeSeconds();
+        this.simVelocityRps = base.simVelocityRps();
 
         // --------------------------------------------------------
         // Declare telemetry
@@ -103,13 +107,13 @@ public final class Motor1507 {
 
         rotorPosition = new InputField<>(
             key("Input", "Position"),
-            signals::getRotorPosition,
+            this::getRotorPosition,
             TelemetryRate.NORMAL
         );
 
         rotorVelocity = new InputField<>(
             key("Input", "Velocity"),
-            signals::getRotorVelocity,
+            this::getRotorVelocity,
             TelemetryRate.FAST
         );
 
@@ -160,6 +164,7 @@ public final class Motor1507 {
     }
 
     public void runDuty(double dutyCycle) {
+        simRotorVelocity = dutyCycle * simVelocityRps;
         setControl(new DutyCycleOut(dutyCycle));
     }
 
@@ -168,10 +173,12 @@ public final class Motor1507 {
     }
 
     public void setPositionVoltage(double rotations) {
+        simTargetRotations = rotations;
         setControl(new PositionVoltage(rotations));
     }
 
     public void setPositionVoltage(double rotations, double ffVolts) {
+        simTargetRotations = rotations;
         setControl(
             new PositionVoltage(rotations)
                 .withFeedForward(ffVolts)
@@ -191,6 +198,8 @@ public final class Motor1507 {
     }
 
     public void stop() {
+        simRotorVelocity = 0.0;
+        simTargetRotations = Double.NaN;
         if (motor instanceof TalonFX fx) {
             fx.stopMotor();
         } else if (motor instanceof TalonFXS fxs) {
@@ -204,7 +213,19 @@ public final class Motor1507 {
 
     public double getRotorPosition() {
         if (RobotBase.isSimulation()) {
-            simRotorPosition += simRotorVelocity * 0.02; // integrate
+            double now = Timer.getFPGATimestamp();
+            double dt = (simLastTimestamp < 0) ? 0.02 : now - simLastTimestamp;
+            simLastTimestamp = now;
+
+            if (!Double.isNaN(simTargetRotations) && simVelocityRps > 0) {
+                double maxStep = simVelocityRps * dt;
+                double error = simTargetRotations - simRotorPosition;
+                double actualStep = Math.copySign(Math.min(Math.abs(error), maxStep), error);
+                simRotorPosition += actualStep;
+                simRotorVelocity = (dt > 1e-6) ? actualStep / dt : 0.0;
+            } else {
+                simRotorPosition += simRotorVelocity * dt;
+            }
             return simRotorPosition;
         }
         return signals.getRotorPosition();

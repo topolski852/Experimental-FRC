@@ -240,6 +240,7 @@ public class Constants {
                 .inverted(true)
                 .withVoltageLimits(3.5, -3.5)
                 .withStatorCurrentLimit(Amps.of(80))
+                .withSimVelocityRps(50.0) // ~50 rps at 100% duty; tune to match real motor
                 .build();
 
 
@@ -273,6 +274,8 @@ public class Constants {
                 .withStallVelocityThreshold(kStall.VELOCITY_THRESHOLD / 360.0) // deg/sec → rps
                 .withStallTime(kStall.TIME_SEC)
 
+                .withSimVelocityRps(0.0833) // ~30 deg/sec in sim; tune as needed
+
                 .withBrake()
                 .build();
 
@@ -290,6 +293,8 @@ public class Constants {
                 .withStallCurrentThreshold(100.0)
                 .withStallVelocityThreshold(kStall.VELOCITY_THRESHOLD / 360.0)
                 .withStallTime(kStall.TIME_SEC)
+
+                .withSimVelocityRps(0.0833)
 
                 .withBrake()
                 .build();
