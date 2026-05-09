@@ -58,6 +58,8 @@ public final class SwerveModule1507 {
     private final StatusSignal<Angle> absPosition;
     private final StatusSignal<AngularVelocity> azimuthVelocity;
 
+    private final BaseStatusSignal[] allSignals;
+
     public SwerveModule1507(
         String name,
         Motor1507 drive,
@@ -83,6 +85,14 @@ public final class SwerveModule1507 {
             absPosition,
             azimuthVelocity
         );
+
+        BaseStatusSignal[] driveSignals = drive.getSignals(); // 6
+        BaseStatusSignal[] steerSignals = steer.getSignals(); // 6
+        this.allSignals = new BaseStatusSignal[14];
+        System.arraycopy(driveSignals, 0, allSignals, 0, 6);
+        System.arraycopy(steerSignals, 0, allSignals, 6, 6);
+        allSignals[12] = absPosition;
+        allSignals[13] = azimuthVelocity;
 
         Telemetry.set(key("Drive/MetersScale"), driveMetersScale);
         Telemetry.set(key("Initialized"), true);
@@ -200,10 +210,14 @@ public final class SwerveModule1507 {
         return new SwerveModulePosition(meters, getAngle());
     }
 
+    public BaseStatusSignal[] getAllSignals() {
+        return allSignals;
+    }
+
+    /** @deprecated Replaced by {@link #getAllSignals()} — Swerve now batches all signals in one call. */
+    @Deprecated
     public void refreshSignals() {
-        if (RobotBase.isSimulation()) return; // no-op in sim
-        drive.refresh();
-        steer.refresh();
+        // no-op — Swerve.periodic() calls BaseStatusSignal.refreshAll(allSignals) for all modules
     }
 
     // ============================================================

@@ -88,6 +88,12 @@ public final class Swerve extends SubsystemBase {
     private double simHeadingRadians = 0.0;
     private ChassisSpeeds lastCommandedSpeeds = new ChassisSpeeds();
 
+    // ------------------------------------------------------------
+    // CAN Signal Batch
+    // ------------------------------------------------------------
+
+    private final BaseStatusSignal[] allSignals;
+
     // ============================================================
     // Constructor
     // ============================================================
@@ -141,6 +147,15 @@ public final class Swerve extends SubsystemBase {
             pigeon
         );
 
+        // Build the master signal array once — 4 modules × 14 signals + 1 Pigeon2 yaw = 57
+        allSignals = new BaseStatusSignal[57];
+        int idx = 0;
+        for (BaseStatusSignal s : frontLeft.getAllSignals())  allSignals[idx++] = s;
+        for (BaseStatusSignal s : frontRight.getAllSignals()) allSignals[idx++] = s;
+        for (BaseStatusSignal s : backLeft.getAllSignals())   allSignals[idx++] = s;
+        for (BaseStatusSignal s : backRight.getAllSignals())  allSignals[idx++] = s;
+        allSignals[idx] = yaw;
+
         Telemetry.set("Swerve/Initialized", true);
     }
 
@@ -155,11 +170,7 @@ public final class Swerve extends SubsystemBase {
             // getHeading() reads simHeadingRadians directly in sim — no Pigeon signal needed.
             simHeadingRadians += lastCommandedSpeeds.omegaRadiansPerSecond * 0.02;
         } else {
-            frontLeft.refreshSignals();
-            frontRight.refreshSignals();
-            backLeft.refreshSignals();
-            backRight.refreshSignals();
-            BaseStatusSignal.refreshAll(yaw);
+            BaseStatusSignal.refreshAll(allSignals);
         }
 
         pose = poseEstimator.update(

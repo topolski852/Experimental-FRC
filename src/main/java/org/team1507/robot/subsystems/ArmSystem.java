@@ -8,6 +8,8 @@
 
 package org.team1507.robot.subsystems;
 
+import com.ctre.phoenix6.BaseStatusSignal;
+
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj2.command.Command;
 
@@ -40,6 +42,8 @@ public final class ArmSystem extends Subsystem1507 {
     /** Secondary arm motor (inverted). */
     private final Motor1507 motorB;
 
+    private final BaseStatusSignal[] armSignals;
+
     /** Last commanded arm angle in degrees. */
     private double targetAngleDeg = RETRACTED_ANGLE_DEGREES;
 
@@ -69,12 +73,17 @@ public final class ArmSystem extends Subsystem1507 {
             22,
             CONFIG_B
         );
+
+        BaseStatusSignal[] a = motorA.getSignals(); // 6
+        BaseStatusSignal[] b = motorB.getSignals(); // 6
+        armSignals = new BaseStatusSignal[12];
+        System.arraycopy(a, 0, armSignals, 0, 6);
+        System.arraycopy(b, 0, armSignals, 6, 6);
     }
 
     @Override
     public void periodic() {
-        motorA.refresh();
-        motorB.refresh();
+        BaseStatusSignal.refreshAll(armSignals);
 
         Telemetry.set("Arm/AngleDegrees", getCurrentAngle());
         Telemetry.set("Arm/TargetDegrees", getTargetAngle());

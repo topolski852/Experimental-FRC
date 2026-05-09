@@ -50,6 +50,8 @@ public final class CtreMotorSignals {
     private final StatusSignal<Voltage> motorVoltage;
     private final StatusSignal<Temperature> deviceTemp;
 
+    private final BaseStatusSignal[] allSignals;
+
     private CtreMotorSignals(
         StatusSignal<Angle> rotorPosition,
         StatusSignal<AngularVelocity> rotorVelocity,
@@ -68,6 +70,12 @@ public final class CtreMotorSignals {
         BaseStatusSignal.setUpdateFrequencyForAll(ODOMETRY_HZ, rotorPosition, rotorVelocity);
         BaseStatusSignal.setUpdateFrequencyForAll(STALL_HZ,    supplyCurrent, statorCurrent);
         BaseStatusSignal.setUpdateFrequencyForAll(MONITOR_HZ,  motorVoltage,  deviceTemp);
+
+        this.allSignals = new BaseStatusSignal[] {
+            rotorPosition, rotorVelocity,
+            supplyCurrent, statorCurrent,
+            motorVoltage,  deviceTemp
+        };
     }
 
     // ============================================================
@@ -104,15 +112,12 @@ public final class CtreMotorSignals {
     // REFRESH
     // ============================================================
 
+    public BaseStatusSignal[] getSignals() {
+        return allSignals;
+    }
+
     public void refresh() {
-        BaseStatusSignal.refreshAll(
-            rotorPosition,
-            rotorVelocity,
-            supplyCurrent,
-            statorCurrent,
-            motorVoltage,
-            deviceTemp
-        );
+        BaseStatusSignal.refreshAll(allSignals);
     }
 
     // ============================================================

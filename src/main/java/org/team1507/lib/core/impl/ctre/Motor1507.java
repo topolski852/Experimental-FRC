@@ -268,6 +268,10 @@ public final class Motor1507 {
         return (com.ctre.phoenix6.hardware.ParentDevice) motor;
     }
 
+    public com.ctre.phoenix6.BaseStatusSignal[] getSignals() {
+        return signals.getSignals();
+    }
+
     /**
      * Returns whether the motor is physically stalled.
      *
