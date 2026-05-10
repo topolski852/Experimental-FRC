@@ -37,7 +37,7 @@ import static org.team1507.robot.Constants.kShooter.DEFAULT_RPM;
 //   new AutoSequence()
 //       .startTimer()
 //       .resetPose(Nodes.Robot.Start.RIGHT)
-//       .driveToPoint(Nodes.Robot.Score.RIGHT, 1.5, true)
+//       .driveToPoint(Nodes.Robot.Score.RIGHT, true)
 //       .shootUntil(5.0)
 //       .stop()
 //       .build();
@@ -46,8 +46,8 @@ import static org.team1507.robot.Constants.kShooter.DEFAULT_RPM;
 //   Speed modifiers must appear immediately before a motion command.
 //   They apply to that one step only and then reset automatically.
 //
-//   .slow().driveToPoint(Nodes.Robot.Pickup.APPROACH_RIGHT, 5.0, true)
-//   .creep().driveToPoint(Nodes.Robot.Pickup.STATION_RIGHT, 1.0, true)
+//   .slow().driveToPoint(Nodes.Robot.Pickup.APPROACH_RIGHT, true)
+//   .creep().driveToPoint(Nodes.Robot.Pickup.STATION_RIGHT, true)
 //
 // GROUPS (parallel / race / deadline):
 //   Each branch inside a group is its own mini-sequence, written as a lambda:
@@ -64,12 +64,12 @@ import static org.team1507.robot.Constants.kShooter.DEFAULT_RPM;
 //         seq -> seq.intakeRun()
 //     )
 //     .race(
-//         seq -> seq.driveToPoint(Nodes.Robot.Score.RIGHT, 5.0, true),
+//         seq -> seq.driveToPoint(Nodes.Robot.Score.RIGHT, true),
 //         seq -> seq.waitSeconds(2.0)
 //     )
 //     .deadline(
-//         seq -> seq.driveToPoint(Nodes.Robot.Pickup.APPROACH_RIGHT, 5.0, true),  // deadline
-//         seq -> seq.intakeRun()                                                   // runs alongside
+//         seq -> seq.driveToPoint(Nodes.Robot.Pickup.APPROACH_RIGHT, true),  // deadline
+//         seq -> seq.intakeRun()                                              // runs alongside
 //     )
 //
 // HOW TO ADD NEW AUTO STEPS:
@@ -113,7 +113,7 @@ public final class AutoSequence {
     // motion command will consume. After that command runs, the override resets.
     //
     // Rule: always place a speed modifier immediately before a motion command.
-    //   CORRECT:   .slow().driveToPoint(target, 5.0, true)
+    //   CORRECT:   .slow().driveToPoint(target, true)
     //   INCORRECT: .slow().armHigh().driveToPoint(...)  ← slow is wasted on armHigh
     // =========================================================================
 
@@ -185,14 +185,14 @@ public final class AutoSequence {
     }
 
     /** Drives forward a fixed distance along the robot's current heading. */
-    public AutoSequence driveForwardMeters(double distanceMeters, double velocity, boolean stopAtEnd) {
-        steps.add(AutoBuilder.swerve.driveForwardMeters(distanceMeters, velocity, stopAtEnd));
+    public AutoSequence driveForwardMeters(double distanceMeters, boolean stopAtEnd) {
+        steps.add(AutoBuilder.swerve.driveForwardMeters(distanceMeters, consumeSpeed(), stopAtEnd));
         return this;
     }
 
-    /** Drives to a field pose and optionally stops on arrival. */
-    public AutoSequence driveToPoint(Pose2d target, double velocity, boolean stopAtEnd) {
-        steps.add(AutoBuilder.swerve.driveToPoint(target, velocity, stopAtEnd));
+    /** Drives to a field pose and optionally stops on arrival. Speed is set by the preceding modifier (.slow(), .withSpeed(), etc.) or defaults to full speed. */
+    public AutoSequence driveToPoint(Pose2d target, boolean stopAtEnd) {
+        steps.add(AutoBuilder.swerve.driveToPoint(target, consumeSpeed(), stopAtEnd));
         return this;
     }
 
@@ -395,7 +395,7 @@ public final class AutoSequence {
      * <pre>
      *   new AutoSequence()
      *       .startTimer()
-     *       .driveToPoint(Nodes.Robot.Score.RIGHT, 1.5, true)
+     *       .slow().driveToPoint(Nodes.Robot.Score.RIGHT, true)
      *       .shootUntil(5.0)
      *       ...
      *       .shootUntil(14.99)
@@ -489,10 +489,10 @@ public final class AutoSequence {
      *
      * Example:
      *   .race(
-     *       seq -> seq.driveToPoint(Nodes.Robot.Score.RIGHT, 5.0, true),
+     *       seq -> seq.driveToPoint(Nodes.Robot.Score.RIGHT, true),
      *       seq -> seq.waitSeconds(2.0)
      *   )
-     *   // Robot drives for at most 5 seconds, but stops after 2 seconds
+     *   // Robot drives at full speed but stops after 2 seconds
      *   // because the waitSeconds branch finishes first.
      */
     public AutoSequence race(Branch... branches) {
@@ -515,8 +515,8 @@ public final class AutoSequence {
      *
      * Example:
      *   .deadline(
-     *       seq -> seq.driveToPoint(Nodes.Robot.Pickup.APPROACH_RIGHT, 5.0, true),  // deadline
-     *       seq -> seq.intakeRun()                                                   // runs alongside
+     *       seq -> seq.driveToPoint(Nodes.Robot.Pickup.APPROACH_RIGHT, true),  // deadline
+     *       seq -> seq.intakeRun()                                              // runs alongside
      *   )
      */
     public AutoSequence deadline(Branch deadlineBranch, Branch... others) {

@@ -38,23 +38,23 @@ public final class ScorePickupScoreAuto {
         return new AutoSequence()
             .startTimer()
             .resetPose(Nodes.Robot.Start.RIGHT)
-            .driveToPoint(Nodes.Robot.Score.RIGHT, 1.5, true)
+            .slow().driveToPoint(Nodes.Robot.Score.RIGHT, true)
 
             // Phase 1 — shoot until the match clock hits 5 seconds
             .shootUntil(5.0)
 
             // Pickup leg — intake runs while driving to the station
             .deadline(
-                seq -> seq.driveToPoint(Nodes.Robot.Pickup.APPROACH_RIGHT, 5.0, true),
+                seq -> seq.driveToPoint(Nodes.Robot.Pickup.APPROACH_RIGHT, true),
                 seq -> seq.intakeRun()
             )
             .deadline(
-                seq -> seq.driveToPoint(Nodes.Robot.Pickup.STATION_RIGHT, 1.0, true),
+                seq -> seq.creep().driveToPoint(Nodes.Robot.Pickup.STATION_RIGHT, true),
                 seq -> seq.intakeRun()
             )
 
             // Return to score position
-            .driveToPoint(Nodes.Robot.Score.RIGHT, 5.0, true)
+            .driveToPoint(Nodes.Robot.Score.RIGHT, true)
 
             // Phase 2 — shoot until 14.99 s so the command ends before auto expires
             .shootUntil(14.99)
