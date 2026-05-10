@@ -144,46 +144,27 @@ public final class CtreMotorConfigurator {
 
     // ============================================================
     // SLOT CONFIGURATION
+    //
+    // Slot0Configs / Slot1Configs / Slot2Configs do not share a common
+    // writable interface in Phoenix 6, so gains must be applied via three
+    // separate overloads with identical bodies. Keep them in sync.
     // ============================================================
 
-    /**
-     * Populates PID and feedforward gains for slot 0.
-     *
-     * @param slot    the slot configuration to modify
-     * @param config  the motor configuration providing gain values
-     */
-    private static void applyToSlot(Slot0Configs slot, MotorConfig config) {
-        applyGains(slot, config);
-    }
-
-    /**
-     * Populates PID and feedforward gains for slot 1.
-     *
-     * @param slot    the slot configuration to modify
-     * @param config  the motor configuration providing gain values
-     */
-    private static void applyToSlot(Slot1Configs slot, MotorConfig config) {
-        applyGains(slot, config);
-    }
-
-    /**
-     * Populates PID and feedforward gains for slot 2.
-     *
-     * @param slot    the slot configuration to modify
-     * @param config  the motor configuration providing gain values
-     */
-    private static void applyToSlot(Slot2Configs slot, MotorConfig config) {
-        applyGains(slot, config);
-    }
+    private static void applyToSlot(Slot0Configs slot, MotorConfig config) { applyGains(slot, config); }
+    private static void applyToSlot(Slot1Configs slot, MotorConfig config) { applyGains(slot, config); }
+    private static void applyToSlot(Slot2Configs slot, MotorConfig config) { applyGains(slot, config); }
 
     /**
      * Writes PID, feedforward, and gravity compensation gains into a slot.
+     *
+     * <p>Gains are skipped for {@code DUTY_CYCLE} and {@code TORQUE} modes —
+     * both are open-loop and do not use slot-based closed-loop gains.
      *
      * @param slot    the slot configuration to modify
      * @param config  the motor configuration providing gain values
      */
     private static void applyGains(Slot0Configs slot, MotorConfig config) {
-        if (config.mode() != ControlMode.DUTY_CYCLE) {
+        if (config.mode() != ControlMode.DUTY_CYCLE && config.mode() != ControlMode.TORQUE) {
             slot.kP = config.kP();
             slot.kI = config.kI();
             slot.kD = config.kD();
@@ -191,25 +172,12 @@ public final class CtreMotorConfigurator {
             slot.kS = config.kS();
             slot.kA = config.kA();
         }
-
-        if (config.gravityType() != GravityType.NONE) {
-            slot.kG = config.kG();
-            slot.GravityType = switch (config.gravityType()) {
-                case COSINE   -> GravityTypeValue.Arm_Cosine;
-                case CONSTANT -> GravityTypeValue.Elevator_Static;
-                default       -> slot.GravityType;
-            };
-        }
+        applyGravity(config, g -> slot.kG = g, t -> slot.GravityType = t);
     }
 
-    /**
-     * Writes PID, feedforward, and gravity compensation gains into a slot.
-     *
-     * @param slot    the slot configuration to modify
-     * @param config  the motor configuration providing gain values
-     */
+    /** @see #applyGains(Slot0Configs, MotorConfig) */
     private static void applyGains(Slot1Configs slot, MotorConfig config) {
-        if (config.mode() != ControlMode.DUTY_CYCLE) {
+        if (config.mode() != ControlMode.DUTY_CYCLE && config.mode() != ControlMode.TORQUE) {
             slot.kP = config.kP();
             slot.kI = config.kI();
             slot.kD = config.kD();
@@ -217,41 +185,44 @@ public final class CtreMotorConfigurator {
             slot.kS = config.kS();
             slot.kA = config.kA();
         }
+        applyGravity(config, g -> slot.kG = g, t -> slot.GravityType = t);
+    }
 
-        if (config.gravityType() != GravityType.NONE) {
-            slot.kG = config.kG();
-            slot.GravityType = switch (config.gravityType()) {
-                case COSINE   -> GravityTypeValue.Arm_Cosine;
-                case CONSTANT -> GravityTypeValue.Elevator_Static;
-                default       -> slot.GravityType;
-            };
+    /** @see #applyGains(Slot0Configs, MotorConfig) */
+    private static void applyGains(Slot2Configs slot, MotorConfig config) {
+        if (config.mode() != ControlMode.DUTY_CYCLE && config.mode() != ControlMode.TORQUE) {
+            slot.kP = config.kP();
+            slot.kI = config.kI();
+            slot.kD = config.kD();
+            slot.kV = config.kV();
+            slot.kS = config.kS();
+            slot.kA = config.kA();
         }
+        applyGravity(config, g -> slot.kG = g, t -> slot.GravityType = t);
     }
 
     /**
-     * Writes PID, feedforward, and gravity compensation gains into a slot.
+     * Applies gravity compensation to a slot.
      *
-     * @param slot    the slot configuration to modify
-     * @param config  the motor configuration providing gain values
+     * <p>Shared by all three slot overloads since the logic is identical but
+     * the slot field references differ per type.
+     *
+     * @param config   motor configuration
+     * @param setKg    setter for the slot's {@code kG} field
+     * @param setType  setter for the slot's {@code GravityType} field
      */
-    private static void applyGains(Slot2Configs slot, MotorConfig config) {
-        if (config.mode() != ControlMode.DUTY_CYCLE) {
-            slot.kP = config.kP();
-            slot.kI = config.kI();
-            slot.kD = config.kD();
-            slot.kV = config.kV();
-            slot.kS = config.kS();
-            slot.kA = config.kA();
-        }
-
-        if (config.gravityType() != GravityType.NONE) {
-            slot.kG = config.kG();
-            slot.GravityType = switch (config.gravityType()) {
-                case COSINE   -> GravityTypeValue.Arm_Cosine;
-                case CONSTANT -> GravityTypeValue.Elevator_Static;
-                default       -> slot.GravityType;
-            };
-        }
+    private static void applyGravity(
+            MotorConfig config,
+            java.util.function.DoubleConsumer setKg,
+            java.util.function.Consumer<GravityTypeValue> setType) {
+        if (config.gravityType() == GravityType.NONE) return;
+        setKg.accept(config.kG());
+        setType.accept(switch (config.gravityType()) {
+            case COSINE   -> GravityTypeValue.Arm_Cosine;
+            case CONSTANT -> GravityTypeValue.Elevator_Static;
+            default       -> throw new IllegalArgumentException(
+                "Unsupported GravityType: " + config.gravityType());
+        });
     }
 
     // ============================================================
@@ -271,6 +242,7 @@ public final class CtreMotorConfigurator {
         applyVoltage(cfg.Voltage, base);
         applyLimitSwitches(cfg.HardwareLimitSwitch, base);
         applyCurrentLimits(cfg.CurrentLimits, base);
+        applyTorqueCurrent(cfg.TorqueCurrent, base);
         applyFeedback(cfg.Feedback, base.feedback());
 
         cfg.ClosedLoopGeneral.ContinuousWrap = base.continuousWrap();
@@ -337,6 +309,21 @@ public final class CtreMotorConfigurator {
         hw.ReverseLimitAutosetPositionEnable = base.reverseLimitAutosetEnable();
         hw.ReverseLimitAutosetPositionValue = base.reverseLimitAutosetValue();
         hw.ReverseLimitType = base.reverseLimitType();
+    }
+
+    /**
+     * Applies peak torque current limits for TorqueCurrentFOC mode (Phoenix Pro).
+     *
+     * <p>These limits are applied in addition to the stator current limit;
+     * whichever is more restrictive takes effect. For non-torque motors the
+     * defaults (800 A / -800 A) are effectively unlimited and have no impact.
+     *
+     * @param tc    torque current configuration
+     * @param base  the slot 0 motor configuration
+     */
+    private static void applyTorqueCurrent(TorqueCurrentConfigs tc, MotorConfig base) {
+        tc.PeakForwardTorqueCurrent = base.peakForwardTorqueCurrent();
+        tc.PeakReverseTorqueCurrent = base.peakReverseTorqueCurrent();
     }
 
     /**

@@ -21,11 +21,16 @@ import static org.team1507.robot.Constants.kIntake.*;
 // ─────────────────────────────────────────────────────────────────────────────
 // Intake
 //
-// Single-motor duty-cycle roller intake.
+// Single-motor torque-controlled roller intake (TorqueCurrentFOC).
 //
-// This is the simplest possible mechanism example — one motor, three commands.
-// Use it as a reference for any mechanism that just runs forward/reverse:
-// conveyor belts, ejectors, agitators, etc.
+// Uses TorqueCurrentFOC instead of duty cycle to solve the brownout problem
+// caused by increasing back-pressure as the hopper fills with balls. In duty
+// cycle mode, current draw rises with load — in torque mode, the motor delivers
+// a fixed torque regardless of load, keeping current predictable and bounded.
+//
+// Tune TORQUE_AMPS_INTAKE in Constants.kIntake:
+//   - Too low → roller struggles against a full hopper
+//   - Too high → brownouts persist under load
 //
 // ── Wiring in Robot.java ─────────────────────────────────────────────────────
 //   operator.rightBumper() → intake.runCommand()
@@ -52,21 +57,22 @@ public final class Intake extends Subsystem1507 {
     @Override
     public void periodic() {
         BaseStatusSignal.refreshAll(motorSignals);
-        log("Running", Math.abs(motor.getMotorVoltage()) > 0.1);
+        log("Running",          Math.abs(motor.getMotorVoltage()) > 0.1);
+        log("StatorCurrentAmps", motor.getStatorCurrent());
     }
 
     // =========================================================================
     // Control Methods
     // =========================================================================
 
-    /** Runs the intake roller forward at the configured duty cycle. */
+    /** Runs the intake roller forward at the configured torque current. */
     public void run() {
-        motor.runDuty(DUTY_INTAKE);
+        motor.runTorqueCurrent(TORQUE_AMPS_INTAKE);
     }
 
-    /** Runs the intake roller in reverse at the configured duty cycle. */
+    /** Runs the intake roller in reverse at the configured torque current. */
     public void reverse() {
-        motor.runDuty(DUTY_REVERSE);
+        motor.runTorqueCurrent(TORQUE_AMPS_REVERSE);
     }
 
     /** Stops the intake motor. */

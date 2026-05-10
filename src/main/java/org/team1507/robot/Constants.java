@@ -352,21 +352,27 @@ public class Constants {
     }
 
     // ============================================================
-    // Intake — single-motor duty-cycle roller intake.
+    // Intake — single-motor torque-controlled roller intake.
     // ============================================================
 
     public static final class kIntake {
 
         public static final int MOTOR_CAN_ID = RobotMap.INTAKE;
 
-        public static final double DUTY_INTAKE  =  0.8;
-        public static final double DUTY_REVERSE = -0.5;
+        // Torque commands in amps (TorqueCurrentFOC).
+        // The motor delivers this exact torque regardless of hopper fill level,
+        // preventing the current spikes that caused brownouts under load.
+        // Tune TORQUE_AMPS_INTAKE down if brownouts persist;
+        // tune up if the roller struggles against a full hopper.
+        public static final double TORQUE_AMPS_INTAKE  =  15.0;
+        public static final double TORQUE_AMPS_REVERSE =  -8.0;
 
         public static final MotorConfig CONFIG =
-            MotorConfig.builder()
+            MotorConfig.builder(ControlMode.TORQUE)
                 .inverted(false)
-                .withVoltageLimits(8, -8)
-                .withStatorCurrentLimit(Amps.of(60.0))
+                .withStatorCurrentLimit(Amps.of(20.0))       // hard cap above commanded torque
+                .withSupplyCurrentLimit(Amps.of(40.0))       // prevents battery brownout
+                .withPeakTorqueCurrent(20.0, -10.0)          // TODO: tune after measuring on robot
                 .withSimVelocityRps(50.0)
                 .build();
     }

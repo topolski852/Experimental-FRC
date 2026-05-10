@@ -12,6 +12,7 @@ import com.ctre.phoenix6.controls.ControlRequest;
 import com.ctre.phoenix6.controls.DutyCycleOut;
 import com.ctre.phoenix6.controls.PositionDutyCycle;
 import com.ctre.phoenix6.controls.PositionVoltage;
+import com.ctre.phoenix6.controls.TorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.hardware.TalonFXS;
@@ -167,6 +168,20 @@ public final class Motor1507 {
     public void runDuty(double dutyCycle) {
         simRotorVelocity = dutyCycle * simVelocityRps;
         setControl(new DutyCycleOut(dutyCycle));
+    }
+
+    /**
+     * Commands the motor to a target stator current (torque) in amps.
+     *
+     * <p>Requires Phoenix Pro. Unlike {@link #runDuty}, this mode delivers a
+     * fixed torque regardless of mechanical load — current draw does not
+     * increase as back-pressure rises, preventing brownouts on loaded rollers.
+     *
+     * @param amps target stator current; positive = forward, negative = reverse
+     */
+    public void runTorqueCurrent(double amps) {
+        simRotorVelocity = (amps / 20.0) * simVelocityRps;
+        setControl(new TorqueCurrentFOC(amps));
     }
 
     /** Commands the motor to a target position using duty-cycle closed-loop. */
